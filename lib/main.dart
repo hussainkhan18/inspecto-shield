@@ -39,6 +39,7 @@ class MyApp extends StatelessWidget {
           Brightness.dark, // Set the status bar icons to dark for visibility
       statusBarBrightness: Brightness.light,
     ));
+    
     final provider = Provider.of<LocaleProvider>(context);
     return MaterialApp(
         locale: provider.locale,
