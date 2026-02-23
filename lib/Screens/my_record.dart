@@ -69,52 +69,53 @@ class _MyRecordsState extends State<MyRecords> {
           ),
           Text(
             AppLocalizations.of(context)!.translate("My Records"),
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(
             height: 30,
           ),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 Expanded(
                   child: Text(
                     AppLocalizations.of(context)!.translate("EQUIPMENT"),
-                    style: TextStyle(fontWeight: FontWeight.w500),
+                    style: const TextStyle(fontWeight: FontWeight.w500),
                     textAlign: TextAlign.center,
-                  ),),
+                  ),
+                ),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.only(right: 15),
                     child: Text(
                       AppLocalizations.of(context)!.translate("WHEN"),
-                      style: TextStyle(fontWeight: FontWeight.w500),
-                      textAlign: TextAlign.center
-                      ,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
                 Expanded(
                   child: Text(
                     AppLocalizations.of(context)!.translate("LOCATION"),
-                    style: TextStyle(fontWeight: FontWeight.w500),
+                    style: const TextStyle(fontWeight: FontWeight.w500),
                     textAlign: TextAlign.center,
                   ),
                 ),
                 Expanded(
                   child: Text(
                     AppLocalizations.of(context)!.translate("AREA"),
-                    style: TextStyle(fontWeight: FontWeight.w500),
+                    style: const TextStyle(fontWeight: FontWeight.w500),
                     textAlign: TextAlign.start,
                   ),
                 ),
               ],
-            ), ),
+            ),
+          ),
           Expanded(
             child: recordList.isEmpty
-                ? Center(
+                ? const Center(
                     child:
                         CircularProgressIndicator()) // Show circular loading indicator when data is loading
                 : ListView.builder(
@@ -145,8 +146,8 @@ class _MyRecordsState extends State<MyRecords> {
                         for (String word in words) {
                           // If adding the next word exceeds 15 characters, append the current line to result and reset it.
                           if ((currentLine + word).length > 15) {
-                            result += currentLine.trim() +
-                                '\n'; // Trim to remove any leading spaces before adding a line break.
+                            result +=
+                                '${currentLine.trim()}\n'; // Trim to remove any leading spaces before adding a line break.
                             currentLine =
                                 '$word '; // Start a new line with the current word.
                           } else {
@@ -166,15 +167,16 @@ class _MyRecordsState extends State<MyRecords> {
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(7),
-                            color: Color(0xff0DC5B9),
-                            border: Border(
+                            color: const Color(0xff0DC5B9),
+                            border: const Border(
                               bottom: BorderSide(
                                 color: Colors.black,
                                 width: 1.0,
                               ),
                             ),
                           ),
-                          padding: const EdgeInsets.only(top: 10, bottom: 10, left:15),
+                          padding: const EdgeInsets.only(
+                              top: 10, bottom: 10, left: 15),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -189,16 +191,7 @@ class _MyRecordsState extends State<MyRecords> {
                                               .split(' ')
                                               .length ==
                                           3
-                                      ? recordList[index][0]
-                                              .toString()
-                                              .split(' ')
-                                              .take(2)
-                                              .join(' ') +
-                                          '\n' +
-                                          recordList[index][0]
-                                              .toString()
-                                              .split(' ')
-                                              .last
+                                      ? '${recordList[index][0].toString().split(' ').take(2).join(' ')}\n${recordList[index][0].toString().split(' ').last}'
                                       : recordList[index][0].toString(),
                                   textAlign: TextAlign.start,
                                 ),

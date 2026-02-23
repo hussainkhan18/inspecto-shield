@@ -69,7 +69,7 @@ class _NewInspectionState extends State<NewInspection> {
       issueDate.text = DateFormat('yyyy-MM-dd').format(pickedDate);
     }
   }
- 
+
   Future<void> _selectExpiryDate(BuildContext context) async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -201,75 +201,71 @@ class _NewInspectionState extends State<NewInspection> {
   //   );
   // }
 
- 
   void showPickerDialog() {
-  Alert(
-    context: context,
-    title: AppLocalizations.of(context)!.translate("Select Image Source"),
-    content: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        ElevatedButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            pickImage(ImageSource.camera);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xff0DC5B9),
-            elevation: 10,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.0),
+    Alert(
+      context: context,
+      title: AppLocalizations.of(context)!.translate("Select Image Source"),
+      content: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              pickImage(ImageSource.camera);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xff0DC5B9),
+              elevation: 10,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
+              ),
             ),
-          ),
-          child: Container(
-            height: MediaQuery.of(context).size.height * .05,
-            child: Center(
-              child: Text(
-                AppLocalizations.of(context)!.translate("Camera"),
-                style: TextStyle(color: Colors.white),
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height * .05,
+              child: Center(
+                child: Text(
+                  AppLocalizations.of(context)!.translate("Camera"),
+                  style: const TextStyle(color: Colors.white),
+                ),
               ),
             ),
           ),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            pickImage(ImageSource.gallery);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xff0DC5B9),
-            elevation: 10,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.0),
-            ),
-          ),
-          child: Container(
-            height: MediaQuery.of(context).size.height * .05,
-            child: Center(
-              child: Text(
-                AppLocalizations.of(context)!.translate("Gallery"),
-                style: TextStyle(color: Colors.white),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              pickImage(ImageSource.gallery);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xff0DC5B9),
+              elevation: 10,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
               ),
             ),
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height * .05,
+              child: Center(
+                child: Text(
+                  AppLocalizations.of(context)!.translate("Gallery"),
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      buttons: [
+        DialogButton(
+          onPressed: () => Navigator.pop(context),
+          color: Colors.red,
+          child: Text(
+            "Cancel",
+            style: TextStyle(color: Colors.white, fontSize: 18),
           ),
         ),
       ],
-    ),
-    buttons: [
-      DialogButton(
-        child: Text(
-          "Cancel",
-          style: TextStyle(color: Colors.white, fontSize: 18),
-        ),
-        onPressed: () => Navigator.pop(context),
-        color: Colors.red,
-      ),
-    ],
-  ).show();
-}
-
-
-
+    ).show();
+  }
 
   // void _showImageDialog() {
   //   showDialog(
@@ -405,94 +401,100 @@ class _NewInspectionState extends State<NewInspection> {
   //     },
   //   );
   // }
-  
-  void _showImageDialog() {
-  Alert(
-    context: context,
-    title: AppLocalizations.of(context)!.translate("Add Certificate"),
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        ArgonButton(
-          width: MediaQuery.of(context).size.width,
-          height: 50,
-          borderRadius: 8.0,
-          elevation: 10,
-          color: const Color(0xff0DC5B9),
-          child: Text(
-            AppLocalizations.of(context)!.translate("Add Picture"),
-            style: TextStyle(color: Colors.white),
-          ),
-          onTap: (startLoading, stopLoading, btnState) async {
-            pickCertificate();
-          },
-        ),
-        SizedBox(height: 10),
-        _certificate != null
-            ? Image.file(_certificate!, height: 60)
-            : Text(AppLocalizations.of(context)!.translate('No image selected.')),
-        SizedBox(height: 10),
-        _buildDateField("Issue Date: ", issueDate, _selectIssueDate),
-        SizedBox(height: 10),
-        _buildDateField("Expiry Date: ", expiryDate, _selectExpiryDate),
-      ],
-    ),
-    buttons: [
-      DialogButton(
-        child: Text(
-          "Submit",
-          style: TextStyle(color: Colors.white, fontSize: 18),
-        ),
-        onPressed: () async {
-          if (_certificate == null || issueDate.text.isEmpty || expiryDate.text.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Please fill all the required fields.")),
-            );
-            return;
-          }
-          // await postCertificateDataToAPI(
-          //   "\${widget.data[\"equipment_id\"]}",
-          //   _certificate,
-          //   "\${issueDate.text}",
-          //   "\${expiryDate.text}",
-          // );
-          await postCertificateDataToAPI(
-  widget.data["equipment_id"].toString(),
-  _certificate,
-  issueDate.text,
-  expiryDate.text,
-);
-          Navigator.pop(context);
-        },
-        color: Colors.black,
-      ),
-    ],
-  ).show();
-}
 
-Widget _buildDateField(String label, TextEditingController controller, Function(BuildContext) onTap) {
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.spaceAround,
-    children: [
-      Text(AppLocalizations.of(context)!.translate(label)),
-      Container(
-        height: 40,
-        width: 100,
-        color: Colors.white,
-        child: TextField(
-          textAlign: TextAlign.center,
-          controller: controller,
-          readOnly: true,
-          decoration: InputDecoration(
-            hintText: AppLocalizations.of(context)!.translate("Select a date"),
-            border: InputBorder.none,
+  void _showImageDialog() {
+    Alert(
+      context: context,
+      title: AppLocalizations.of(context)!.translate("Add Certificate"),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          ArgonButton(
+            width: MediaQuery.of(context).size.width,
+            height: 50,
+            borderRadius: 8.0,
+            elevation: 10,
+            color: const Color(0xff0DC5B9),
+            child: Text(
+              AppLocalizations.of(context)!.translate("Add Picture"),
+              style: const TextStyle(color: Colors.white),
+            ),
+            onTap: (startLoading, stopLoading, btnState) async {
+              pickCertificate();
+            },
           ),
-          onTap: () => onTap(context),
-        ),
+          const SizedBox(height: 10),
+          _certificate != null
+              ? Image.file(_certificate!, height: 60)
+              : Text(AppLocalizations.of(context)!
+                  .translate('No image selected.')),
+          const SizedBox(height: 10),
+          _buildDateField("Issue Date: ", issueDate, _selectIssueDate),
+          const SizedBox(height: 10),
+          _buildDateField("Expiry Date: ", expiryDate, _selectExpiryDate),
+        ],
       ),
-    ],
-  );
-}
+      buttons: [
+        DialogButton(
+          onPressed: () async {
+            if (_certificate == null ||
+                issueDate.text.isEmpty ||
+                expiryDate.text.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text("Please fill all the required fields.")),
+              );
+              return;
+            }
+            // await postCertificateDataToAPI(
+            //   "\${widget.data[\"equipment_id\"]}",
+            //   _certificate,
+            //   "\${issueDate.text}",
+            //   "\${expiryDate.text}",
+            // );
+            await postCertificateDataToAPI(
+              widget.data["equipment_id"].toString(),
+              _certificate,
+              issueDate.text,
+              expiryDate.text,
+            );
+            Navigator.pop(context);
+          },
+          color: Colors.black,
+          child: Text(
+            "Submit",
+            style: TextStyle(color: Colors.white, fontSize: 18),
+          ),
+        ),
+      ],
+    ).show();
+  }
+
+  Widget _buildDateField(String label, TextEditingController controller,
+      Function(BuildContext) onTap) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        Text(AppLocalizations.of(context)!.translate(label)),
+        Container(
+          height: 40,
+          width: 100,
+          color: Colors.white,
+          child: TextField(
+            textAlign: TextAlign.center,
+            controller: controller,
+            readOnly: true,
+            decoration: InputDecoration(
+              hintText:
+                  AppLocalizations.of(context)!.translate("Select a date"),
+              border: InputBorder.none,
+            ),
+            onTap: () => onTap(context),
+          ),
+        ),
+      ],
+    );
+  }
 
   Future<void> postCertificateDataToAPI(String equipmentId,
       File? certificateImg, String issuanceDate, String expiryDate) async {
@@ -555,8 +557,7 @@ Widget _buildDateField(String label, TextEditingController controller, Function(
     final response = await http.get(
       Uri.parse(
         // 'https://inspectoshield.com/api/generate/${widget.data["report_id"].toString()}',
-      'https://inspectoshield.com/api/generate/${widget.data["report_id"].toString()}',
-
+        'https://inspectoshield.com/api/generate/${widget.data["report_id"].toString()}',
       ),
     );
 
@@ -624,11 +625,11 @@ Widget _buildDateField(String label, TextEditingController controller, Function(
       var locationId = equipmentData["location_id"];
       var area = equipmentData["area"];
 
-      print("locationId asdasd ${locationName}");
+      print("locationId asdasd $locationName");
 
       if (_image == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Upload equipment Image First")));
+            const SnackBar(content: Text("Upload equipment Image First")));
         return; // Exit the function if image is null
       }
 
@@ -700,8 +701,8 @@ Widget _buildDateField(String label, TextEditingController controller, Function(
 
       print("Time Right Now: ${DateTime.now()}");
     } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Something went wrong please refresh app")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Something went wrong please refresh app")));
       print('Error saving checklist: $error');
     }
   }
@@ -783,56 +784,55 @@ Widget _buildDateField(String label, TextEditingController controller, Function(
   //   }
   // }
 
-
-void showSuccessAnimation(BuildContext context) {
-  Alert(
-    context: context,
-    title: "Success",
-    content: Column(
-      children: [
-        Lottie.asset(
-          'assets/animations/success.json',
-          width: MediaQuery.of(context).size.width * .7,
-          height: MediaQuery.of(context).size.height * .3,  ), 
-
-        SizedBox(height: 10),
-        Text(
-          AppLocalizations.of(context)!.translate("New inspection made"),
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+  void showSuccessAnimation(BuildContext context) {
+    Alert(
+      context: context,
+      title: "Success",
+      content: Column(
+        children: [
+          Lottie.asset(
+            'assets/animations/success.json',
+            width: MediaQuery.of(context).size.width * .7,
+            height: MediaQuery.of(context).size.height * .3,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            AppLocalizations.of(context)!.translate("New inspection made"),
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+      buttons: [
+        DialogButton(
+          onPressed: () {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => HomeScreen(
+                  id: widget.id,
+                  name: widget.name,
+                  company: widget.company,
+                  branch: widget.branch,
+                  email: widget.email,
+                  password: widget.password,
+                  image: widget.image,
+                  contact: widget.contact,
+                ),
+              ),
+              (Route<dynamic> route) => false,
+            );
+          },
+          color: Colors.black,
+          child: Text(
+            "CLOSE",
+            style: TextStyle(color: Colors.white),
           ),
         ),
       ],
-    ),
-
-    buttons: [
-      DialogButton(
-        child: Text(
-          "CLOSE",
-          style: TextStyle(color: Colors.white),
-        ),
-        onPressed: () { Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => HomeScreen(
-                id: widget.id,
-                name: widget.name,
-                company: widget.company,
-                branch: widget.branch,
-                email: widget.email,
-                password: widget.password,
-                image: widget.image,
-                contact: widget.contact,
-              ),
-            ),
-            (Route<dynamic> route) => false,
-          );
-        },
-        color: Colors.black,
-      ),
-    ],
-  ).show();
-}
+    ).show();
+  }
 
   @override
   void initState() {
@@ -867,7 +867,7 @@ void showSuccessAnimation(BuildContext context) {
     return Scaffold(
         body: SafeArea(
       child: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10.0),
@@ -885,7 +885,8 @@ void showSuccessAnimation(BuildContext context) {
                               _equipmentData?["equipment_img"] ??
                                   "https://hashbaqala.bssstageserverforpanels.xyz/upload/profileImage/user.png",
                               // scale: 7,
-                                  fit: BoxFit.contain, // optional: ensures it fits well
+                              fit: BoxFit
+                                  .contain, // optional: ensures it fits well
 
                               alignment: Alignment.center,
                             ),
@@ -914,7 +915,7 @@ void showSuccessAnimation(BuildContext context) {
                                   child: Text(
                                     AppLocalizations.of(context)!
                                         .translate("Add Certificate"),
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                         color: Colors.white, fontSize: 15),
                                   ),
                                   onTap: (startLoading, stopLoading, btnState) {
@@ -945,45 +946,44 @@ void showSuccessAnimation(BuildContext context) {
                     // _equipmentData?["location_description"] ?? "No data",
                     // ),
 
-                     Divider(),
+                    const Divider(),
                     // Location Description
                     _buildDataRow(
                       context,
                       label: "AREA:",
-                      value:
-                    _equipmentData?["area"] ?? "No data",
-                    ), Divider(),
+                      value: _equipmentData?["area"] ?? "No data",
+                    ),
+                    const Divider(),
                     // Location Description
                     _buildDataRow(
                       context,
                       label: "LOCATION:",
-                      value:
-                    _equipmentData?["location"] ?? "No data",
+                      value: _equipmentData?["location"] ?? "No data",
                     ),
 
-                    Divider(),
+                    const Divider(),
                     // Equipment Name
-                     _buildDataRow(
+                    _buildDataRow(
                       context,
-                    label: "DESCRIPTION:",
-                    value: _equipmentData?["description"] ?? "No data",
+                      label: "DESCRIPTION:",
+                      value: _equipmentData?["description"] ?? "No data",
                     ),
-                    Divider(),
+                    const Divider(),
                     // Equipment Type
                     _buildDataRow(
                       context,
                       label: "EQUIPMENT TYPE: ",
                       value: _equipmentData?["equipment_type"] ?? "No data",
                     ),
-                    
-                    Divider(),
+
+                    const Divider(),
                     // Equipment Category
                     _buildDataRow(
                       context,
                       label: "EQUIPMENT CATEGORY: ",
                       value: _equipmentData?["equipment_category"] ?? "No data",
                     ),
-                    Divider(),
+                    const Divider(),
                     // Last Inspection Date
                     _buildDataRow(
                       context,
@@ -991,12 +991,12 @@ void showSuccessAnimation(BuildContext context) {
                       value: _equipmentData?["last_inspection_date"] ??
                           "No data", // Replace with the correct field if available
                     ),
-                    Divider(),
+                    const Divider(),
                     // Checklist Title
                     Text(
                       AppLocalizations.of(context)!.translate("Checklist"),
-                      style:
-                          TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          fontSize: 25, fontWeight: FontWeight.bold),
                     ),
                     // Checklist Items
                     Consumer<ChecklistProvider>(
@@ -1012,13 +1012,13 @@ void showSuccessAnimation(BuildContext context) {
                             : ListView.builder(
                                 itemCount: items.length,
                                 shrinkWrap: true,
-                                physics: NeverScrollableScrollPhysics(),
+                                physics: const NeverScrollableScrollPhysics(),
                                 itemBuilder: (context, index) {
                                   return Container(
                                     height: 85,
                                     alignment: Alignment.centerLeft,
-                                    padding:
-                                        EdgeInsets.only(left: 9, right: 20),
+                                    padding: const EdgeInsets.only(
+                                        left: 9, right: 20),
                                     child: _buildRadioButton(items[index]),
                                   );
                                 },
@@ -1035,17 +1035,17 @@ void showSuccessAnimation(BuildContext context) {
                       child: Text(
                         AppLocalizations.of(context)!
                             .translate("Upload Equipment Image"),
-                        style: TextStyle(color: Colors.white),
+                        style: const TextStyle(color: Colors.white),
                       ),
                       onTap: (startLoading, stopLoading, btnState) {
-                      print(_image);
-                      showPickerDialog();                         
-                        
-                        },),  
+                        print(_image);
+                        showPickerDialog();
+                      },
+                    ),
                     // Display selected image
                     Visibility(
                       visible: isVisible,
-                      child: Container(
+                      child: SizedBox(
                         height: MediaQuery.of(context).size.height / 5,
                         child: _image != null
                             ? Image.file(_image!)
@@ -1063,13 +1063,9 @@ void showSuccessAnimation(BuildContext context) {
                       borderRadius: 8.0,
                       elevation: 10,
                       color: Colors.black,
-                      child: Text(
-                        AppLocalizations.of(context)!.translate("SAVE"),
-                        style: TextStyle(color: Colors.white),
-                      ),
                       loader: Container(
-                        padding: EdgeInsets.all(10),
-                        child: CircularProgressIndicator(
+                        padding: const EdgeInsets.all(10),
+                        child: const CircularProgressIndicator(
                           valueColor:
                               AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
@@ -1079,12 +1075,16 @@ void showSuccessAnimation(BuildContext context) {
                         var equipmentData = await fetchEquipmentData(
                             widget.data["report_id"].toString());
                         var equipmentName = equipmentData!["equipment_name"];
-                        print("equip name ${equipmentName}");
+                        print("equip name $equipmentName");
 
                         startLoading();
                         await saveCheckList();
                         stopLoading();
                       },
+                      child: Text(
+                        AppLocalizations.of(context)!.translate("SAVE"),
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                     const SizedBox(
                       height: 10,
@@ -1103,11 +1103,11 @@ Widget _buildDataRow(BuildContext context,
   return Row(
     children: [
       Expanded(
-        child: Container(
+        child: SizedBox(
           width: MediaQuery.of(context).size.width / 2,
           child: Text(
             AppLocalizations.of(context)!.translate(label),
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
@@ -1116,11 +1116,11 @@ Widget _buildDataRow(BuildContext context,
       ),
       Expanded(
         child: Container(
-          padding: EdgeInsets.only(left: 20),
+          padding: const EdgeInsets.only(left: 20),
           width: MediaQuery.of(context).size.width / 2,
           child: Text(
             value,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 15,
             ),
           ),
@@ -1136,7 +1136,7 @@ Widget _buildRadioButton(String title) {
     children: [
       Text(
         title,
-        style: TextStyle(fontSize: 17),
+        style: const TextStyle(fontSize: 17),
       ),
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1151,7 +1151,7 @@ Widget _buildRadioButton(String title) {
                 child: Row(
                   children: [
                     Radio(
-                      fillColor: MaterialStateProperty.all(Colors.green),
+                      fillColor: WidgetStateProperty.all(Colors.green),
                       activeColor: Colors.green,
                       value: "Good",
                       groupValue: ChecklistProvider.items[title],
@@ -1161,7 +1161,7 @@ Widget _buildRadioButton(String title) {
                     ),
                     Text(
                       AppLocalizations.of(context)!.translate('Good'),
-                      style: TextStyle(fontSize: 17),
+                      style: const TextStyle(fontSize: 17),
                     ),
                   ],
                 ),
@@ -1177,7 +1177,7 @@ Widget _buildRadioButton(String title) {
                 child: Row(
                   children: [
                     Radio(
-                      fillColor: MaterialStateProperty.all(Colors.red),
+                      fillColor: WidgetStateProperty.all(Colors.red),
                       activeColor: Colors.red,
                       value: "Bad",
                       groupValue: ChecklistProvider.items[title],
@@ -1187,7 +1187,7 @@ Widget _buildRadioButton(String title) {
                     ),
                     Text(
                       AppLocalizations.of(context)!.translate('Bad'),
-                      style: TextStyle(fontSize: 17),
+                      style: const TextStyle(fontSize: 17),
                     ),
                   ],
                 ),
@@ -1203,7 +1203,7 @@ Widget _buildRadioButton(String title) {
                 child: Row(
                   children: [
                     Radio(
-                      fillColor: MaterialStateProperty.all(Colors.grey[800]),
+                      fillColor: WidgetStateProperty.all(Colors.grey[800]),
                       activeColor: Colors.grey[800],
                       value: "N/A",
                       groupValue: ChecklistProvider.items[title],
@@ -1213,7 +1213,7 @@ Widget _buildRadioButton(String title) {
                     ),
                     Text(
                       AppLocalizations.of(context)!.translate('N/A'),
-                      style: TextStyle(fontSize: 17),
+                      style: const TextStyle(fontSize: 17),
                     ),
                   ],
                 ),

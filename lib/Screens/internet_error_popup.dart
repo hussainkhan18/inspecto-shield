@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hash_mufattish/services/connectivity_service.dart';
 
-
 class NetworkWrapper extends StatefulWidget {
   final Widget child;
 
-  NetworkWrapper({required this.child});
+  const NetworkWrapper({super.key, required this.child});
 
   @override
   _NetworkWrapperState createState() => _NetworkWrapperState();

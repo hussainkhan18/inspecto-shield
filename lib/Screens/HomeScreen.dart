@@ -2,19 +2,19 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:hash_mufattish/LanguageTranslate/app_localizations.dart';
-import 'package:hash_mufattish/Providers/local_Provider.dart';
 import 'package:hash_mufattish/Screens/Profile.dart';
 import 'package:hash_mufattish/Screens/equipment_info.dart';
 import 'package:hash_mufattish/Screens/internet_error_popup.dart';
 import 'package:hash_mufattish/Screens/login.dart';
 import 'package:hash_mufattish/Screens/my_record.dart';
 import 'package:hash_mufattish/Screens/new_inspection.dart';
-import 'package:hash_mufattish/Screens/qr_code_scanner.dart';
-import 'package:hash_mufattish/Screens/qr_code_scanner_dialog.dart';
+import 'package:hash_mufattish/services/notification_service.dart';
 import 'package:loading_icon_button/loading_icon_button.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:provider/provider.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'package:audioplayers/audioplayers.dart';
 
 class HomeScreen extends StatefulWidget {
   int id;
@@ -25,6 +25,7 @@ class HomeScreen extends StatefulWidget {
   String password;
   String image;
   String contact;
+
   HomeScreen({
     super.key,
     required this.id,
@@ -42,26 +43,352 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-
-  // final _qrBarCodeScannerDialogPlugin = QrBarCodeScannerDialog();  
-    final MobileScannerController _controller = MobileScannerController();
-    
-// Controller for the scanner
+  final MobileScannerController _controller = MobileScannerController();
   final MobileScannerController controller = MobileScannerController();
   StreamSubscription<Object?>? _subscription;
   String? scannedCode;
-
   String? code;
 
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
+  @override
+  void initState() {
+    super.initState();
+    _initAudio();
+    _setupNotificationListener();
+  }
+
+  Future<void> _initAudio() async {
+    await AudioPlayer.global.setAudioContext(
+      AudioContext(
+        android: const AudioContextAndroid(
+          isSpeakerphoneOn: false,
+          stayAwake: false,
+          contentType: AndroidContentType.music,
+          usageType: AndroidUsageType.alarm,
+          audioFocus: AndroidAudioFocus.gain,
+        ),
+        iOS: AudioContextIOS(
+          category: AVAudioSessionCategory.playback,
+          options: const {AVAudioSessionOptions.mixWithOthers},
+        ),
+      ),
+    );
+  }
+
+  void _setupNotificationListener() {
+    NotificationService().onNotificationClick = (data) {
+      print('HomeScreen received notification data: $data');
+      if (mounted && (data.containsKey('is_emergency') || data.isNotEmpty)) {
+        _showPendingInspectionsPopup();
+      }
+    };
+    Future.delayed(const Duration(milliseconds: 500), () {
+      NotificationService().deliverPendingNotification();
+    });
+  }
+
+  Future<Map<String, dynamic>?> _fetchPendingInspections() async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse(
+              'https://inspectoshield.com/api/inspector/pending-inspections/${widget.id}',
+            ),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      print('Pending Inspections Response: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['success'] == true && jsonData['data'] != null) {
+          return jsonData;
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching pending inspections: $e');
+      return null;
+    }
+  }
+
+  void _showPendingInspectionsPopup() async {
+    // ✅ Alarm sound play karo
+    try {
+      await _audioPlayer.stop();
+      await _audioPlayer.setVolume(0.4);
+      await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+      await _audioPlayer.play(AssetSource('sounds/alarm.mp3'));
+    } catch (e) {
+      print('Sound play error: $e');
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.6),
+      builder: (BuildContext context) {
+        return _AlarmPopup(
+          fetchPendingInspections: _fetchPendingInspections,
+          onClose: () {
+            _audioPlayer.stop();
+            Navigator.pop(context);
+          },
+          buildCard: _buildInspectionCard,
+        );
+      },
+    ).then((_) {
+      // Barrier dismiss se band ho tab bhi sound stop karo
+      _audioPlayer.stop();
+    });
+  }
+
+  // ✅ Clean modern inspection card
+  Widget _buildInspectionCard(Map<String, dynamic> inspection, int index) {
+    final status = inspection['status'] ?? 'Pending';
+
+    Color statusColor;
+    Color statusBg;
+    IconData statusIcon;
+
+    switch (status.toLowerCase()) {
+      case 'overdue':
+        statusColor = const Color(0xFFEF4444);
+        statusBg = const Color(0xFFEF4444);
+        statusIcon = Icons.error_outline_rounded;
+        break;
+      case 'pending':
+        statusColor = const Color(0xFFF59E0B);
+        statusBg = const Color(0xFFF59E0B);
+        statusIcon = Icons.schedule_rounded;
+        break;
+      case 'completed':
+        statusColor = const Color(0xFF22C55E);
+        statusBg = const Color(0xFF22C55E);
+        statusIcon = Icons.check_circle_outline_rounded;
+        break;
+      default:
+        statusColor = const Color(0xFF64748B);
+        statusBg = const Color(0xFF64748B);
+        statusIcon = Icons.help_outline_rounded;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: statusColor.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          // ── Top row: status accent + equipment name ──────────────
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.06),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(statusIcon, color: statusColor, size: 17),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    inspection['name'] ?? 'Unknown Equipment',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.1,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusBg.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: statusBg.withOpacity(0.35),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    status,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: statusColor,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Details grid ─────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+            child: Column(
+              children: [
+                _detailRow(
+                  icon: Icons.location_on_rounded,
+                  iconColor: const Color(0xFF3B82F6),
+                  label: 'Location',
+                  value:
+                      '${inspection['area_name'] ?? 'N/A'}  ·  ${inspection['location_name'] ?? 'N/A'}',
+                ),
+                const SizedBox(height: 8),
+                _detailRow(
+                  icon: Icons.repeat_rounded,
+                  iconColor: const Color(0xFFA78BFA),
+                  label: 'Frequency',
+                  value: inspection['frequency'] ?? 'N/A',
+                ),
+                const SizedBox(height: 8),
+                const Divider(
+                  color: Color(0xFF334155),
+                  height: 1,
+                  thickness: 1,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _dateBadge(
+                        label: 'Last Inspection',
+                        value: inspection['last_inspection']
+                                ?.toString()
+                                .split(' ')[0] ??
+                            'N/A',
+                        icon: Icons.history_rounded,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _dateBadge(
+                        label: 'Due Date',
+                        value: inspection['deadline_date'] ?? 'N/A',
+                        icon: Icons.event_rounded,
+                        color: statusColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 15, color: iconColor),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF64748B),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFFCBD5E1),
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _dateBadge({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 12, color: color),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: color.withOpacity(0.8),
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showError(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      duration: Duration(seconds: 3),
-    ),
-  );
-  Navigator.pop(context); // Close dialog on error
-}
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 3)),
+    );
+    Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,560 +399,263 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.only(top: 40, bottom: 30),
-                child: Image.asset(
-                  "assets/HASH MUFATTISH.png",
-                  scale: 4,
-                ),
+                child: Image.asset("assets/HASH MUFATTISH.png", scale: 4),
               ),
-              // ElevatedButton(
-              //   onPressed: () {
-              //     Navigator.push(
-              //         context,
-              //         MaterialPageRoute(
-              //           builder: (context) => NetworkWrapper(
-              //             child: QRViewExample(
-              //               id: widget.id,
-              //               name: widget.name,
-              //               branch: widget.branch,
-              //               company: widget.company,
-              //               email: widget.email,
-              //               password: widget.password,
-              //               image: widget.image,
-              //               contact: widget.contact,
-              //             ),
-              //           ),
-              //         ));
-              //     // Navigator.push(
-              //     //   context,
-              //     //   MaterialPageRoute(
-              //     //     builder: (context) => NetworkWrapper(
-              //     //       child: NewInspection(
-              //     //         data: const {
-              //     //           "report_id": 13,
-              //     //           "equipment_id": "7",
-              //     //           "checklist_id": "7",
-              //     //           "equipment_category": "Fire Extinguisher",
-              //     //           "equipment_sub_category":
-              //     //               "Water-Based Extinguishers",
-              //     //           "equipment_type":
-              //     //               "For ordinary combustibles like wood, paper, and textiles",
-              //     //           "checklist": "Testing Fire Estinguishers",
-              //     //           "area_id": "8",
-              //     //           "area": "Elevator Lobbies",
-              //     //           "location":
-              //     //               "Every 75 feet along guest room corridors",
-              //     //           "location_description":
-              //     //               "This ensures immediate access as guests and staff enter or exit the building, providing a quick response point in case of a fire.",
-              //     //           "location_id": "8",
-              //     //           "equipment_name":
-              //     //               "Aqueous Film-Forming Foam (AFFF) Extinguisher",
-              //     //           "description":
-              //     //               "AFFF extinguishers contain a foam solution that forms a blanket or film over the fuel, suppressing the fire by smothering it and cutting off the oxygen supply.",
-              //     //           "certificate_permission": "yes",
-              //     //           "issuance_date": "2024-07-03",
-              //     //           "expiry_date": "2025-07-03",
-              //     //           "equipment_img":
-              //     //               "https:\/\/inspectoshield.com\/public\/uploads\/c94b72ad0f88e3f0ed4bd3ad2f970abb1719948133.jpg",
-              //     //           "certificate_img":
-              //     //               "https:\/\/inspectoshield.com\/public\/uploads\/6d600bd036cca887fd71d396910b60d11719948133.png",
-              //     //           "tags": [
-              //     //             "Pressure Gauge",
-              //     //             "Label and Instructions",
-              //     //             "Nozzle and Hose",
-              //     //             "Tamper Seal",
-              //     //             "Pressure Test",
-              //     //             "Siphon Tube",
-              //     //             "Seals and Pins"
-              //     //           ]
-              //     //         },
-              //     //         id: widget.id,
-              //     //         name: widget.name,
-              //     //         branch: widget.branch,
-              //     //         company: widget.company,
-              //     //         email: widget.email,
-              //     //         password: widget.password,
-              //     //         image: widget.image,
-              //     //         contact: widget.contact,
-              //     //       ),
-              //     //     ),
-              //     //   ),
-              //     // );
-              //   },
-              //   child: Text('New Inspection'),
-              // ),
 
-              //Moving to new inspection
+              // ─── NEW INSPECTION ───────────────────────────────────
               Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child:
-                  //  ArgonButton(
-                  //     width: MediaQuery.of(context).size.width,
-                  //     height: 50,
-                  //     borderRadius: 8.0,
-                  //     elevation: 10,
-                  //     color: Colors.black,
-                  //     borderSide: BorderSide(color: Colors.blue),
-                  //     child: Text(
-                  //       AppLocalizations.of(context)!
-                  //           .translate('NEW INSPECTION'),
+                padding: const EdgeInsets.all(12.0),
+                child: ArgonButton(
+                  width: MediaQuery.of(context).size.width,
+                  height: 50,
+                  borderRadius: 8.0,
+                  elevation: 10,
+                  color: Colors.black,
+                  borderSide: const BorderSide(color: Colors.blue),
+                  child: const Text(
+                    'NEW INSPECTION',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: (startLoading, stopLoading, btnState) async {
+                    bool isNavigated = false;
 
-                  //       style: TextStyle(
-                  //           color: Colors.white,
-                  //           fontSize: 15,
-                  //           fontWeight: FontWeight.w500),
-                  //     ),
-                  //     onTap: (startLoading, stopLoading, btnState) {
+                    Alert(
+                      context: context,
+                      title: "Scan QR Code",
+                      content: SizedBox(
+                        height: 400,
+                        width: 300,
+                        child: MobileScanner(
+                          onDetect: (BarcodeCapture barcodeCapture) {
+                            if (isNavigated) return;
+                            isNavigated = true;
 
-                     
-                  //       Navigator.push(
-                  //         context,
-                  //         MaterialPageRoute(
-                  //           builder: (context) => NewInspection(
-                  //             data: const {
-                  //               "report_id": 78,
-                  //               "equipment_id": "6",
-                  //               "location": "1st Floor",
-                  //               "location_description": "account office",
-                  //               "equipment_name": "PowerGuard Inverter 3000",
-                  //               // "report_id": 12,A
-                  //               // "equipment_id": "6",
-                  //               // // "checklist_id": "6",
-                  //               // // "equipment_category": "Electrical Equipment's",
-                  //               // // "equipment_sub_category":
-                  //               // //     "Power Supply Systems",
-                  //               // // "equipment_type": "Inverter",
-                  //               // // "checklist": "Inverter Testing",
-                  //               // // "area_id": "7",
-                  //               // // "area": "Electrical Room",
-                  //               // "location":
-                  //               //     "Adjacent to the Main Distribution Panel",
-                  //               // "location_description":
-                  //               //     "he PowerGuard Inverter 3000 is installed in the electrical room of the PC Hotel, specifically in the backup power section adjacent to the main distribution panel.",
-                  //               // // "location_id": "7",
-                  //               // "equipment_name": "PowerGuard Inverter 3000",
-                  //               // // "description":
-                  //               // //     "To ensure the PowerGuard Inverter 3000 operates reliably and safely, a comprehensive testing process is conducted. This involves several stages, each designed to assess different aspects of the inverter's performance and functionality.",
-                  //               // // "certificate_permission": "no",
-                  //               // // "issuance_date": null,
-                  //               // // "expiry_date": null,
-                  //               // // "equipment_img":
-                  //               // //     "https:\/\/inspectoshield.com\/public\/uploads\/e940e867f5b3c741a67d004a114977e61719829599.jpg",
-                  //               // // "certificate_img":
-                  //               // //     "https:\/\/inspectoshield.com\/public\/uploads\/",
-                  //               // // "tags": [
-                  //               // //   "Output Voltage",
-                  //               // //   "Output Frequency",
-                  //               // //   "Switching and Control",
-                  //               // //   "Automatic Transfer Switch (ATS)",
-                  //               // //   "Battery Charging",
-                  //               // //   "Noise Level",
-                  //               // //   "Efficiency"
-                  //               // // ]
-                  //             },
-                  //             id: widget.id,
-                  //             name: widget.name,
-                  //             branch: widget.branch,
-                  //             company: widget.company,
-                  //             email: widget.email,
-                  //             password: widget.password,
-                  //             image: widget.image,
-                  //             contact: widget.contact,
-                  //           ),
-                  //         ),
-                  //       );
+                            final String? code =
+                                barcodeCapture.barcodes.first.rawValue;
+                            print('Raw QR Code Data: $code');
 
-                  //     }
+                            if (code != null && code.trim().startsWith('{')) {
+                              try {
+                                final decodedData = json.decode(code);
 
-
-
-                  //     )
-
-
-ArgonButton(
-  width: MediaQuery.of(context).size.width,
-  height: 50,
-  borderRadius: 8.0,
-  elevation: 10,
-  color: Colors.black,
-  borderSide: BorderSide(color: Colors.blue),
-  child: Text(
-    'NEW INSPECTION',
-    style: TextStyle(
-      color: Colors.white,
-      fontSize: 15,
-      fontWeight: FontWeight.w500,
-    ),
-  ),
-  onTap: (startLoading, stopLoading, btnState) async {
-    bool isNavigated = false; // Flag to prevent multiple navigations
-
-    Alert(
-      context: context,
-      title: "Scan QR Code",
-      content: SizedBox(
-        height: 400,
-        width: 300,
-        child: MobileScanner(
-          onDetect: (BarcodeCapture barcodeCapture) {
-            if (isNavigated) return; // Prevent multiple scans
-            isNavigated = true;
-
-            final String? code = barcodeCapture.barcodes.first.rawValue;
-            print('Raw QR Code Data: \$code');
-
-            if (code != null && code.trim().startsWith('{')) {
-              try {
-                final decodedData = json.decode(code);
-
-                if (decodedData is Map) {
-                  Navigator.pop(context); // Close scanner dialog
-
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => NetworkWrapper(
-                        child: NewInspection(
-                          data: decodedData,
-                          id: widget.id,
-                          name: widget.name,
-                          branch: widget.branch,
-                          company: widget.company,
-                          email: widget.email,
-                          password: widget.password,
-                          image: widget.image,
-                          contact: widget.contact,
+                                if (decodedData is Map) {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => NetworkWrapper(
+                                        child: NewInspection(
+                                          data: decodedData,
+                                          id: widget.id,
+                                          name: widget.name,
+                                          branch: widget.branch,
+                                          company: widget.company,
+                                          email: widget.email,
+                                          password: widget.password,
+                                          image: widget.image,
+                                          contact: widget.contact,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content:
+                                          Text('Unexpected QR code format.'),
+                                      duration: Duration(seconds: 3),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content:
+                                        Text('Failed to decode QR code data.'),
+                                    duration: Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            } else {
+                              print("Invalid QR code format.");
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Ensure QR code is scanned under optimal conditions.',
+                                  ),
+                                  duration: Duration(seconds: 5),
+                                ),
+                              );
+                            }
+                          },
                         ),
                       ),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Unexpected QR code format.'),
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
-                }
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Failed to decode QR code data.'),
-                    duration: Duration(seconds: 3),
-                  ),
-                );
-              }
-            } else {
-              print("Invalid QR code format.");
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Ensure QR code is scanned under optimal conditions (lighting, angle, distance).',
-                  ),
-                  duration: Duration(seconds: 5),
+                      buttons: [
+                        DialogButton(
+                          onPressed: () => Navigator.pop(context),
+                          color: Colors.red,
+                          child: const Text(
+                            "Cancel",
+                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          ),
+                        ),
+                      ],
+                    ).show();
+                  },
                 ),
-              );
-            }
-          },
-        ),
-      ),
-      buttons: [
-        DialogButton(
-          child: Text(
-            "Cancel",
-            style: TextStyle(color: Colors.white, fontSize: 18),
-          ),
-          onPressed: () => Navigator.pop(context),
-          color: Colors.red,
-        ),
-      ],
-    ).show();
-  },
-),
+              ),
 
+              // ─── EQUIPMENT INFO ───────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: ArgonButton(
+                  width: MediaQuery.of(context).size.width,
+                  height: 50,
+                  borderRadius: 8.0,
+                  elevation: 10,
+                  color: Colors.black,
+                  borderSide: const BorderSide(color: Colors.blue),
+                  child: Text(
+                    AppLocalizations.of(context)!.translate('EQUIPMENT INFO'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: (startLoading, stopLoading, btnState) async {
+                    Alert(
+                      context: context,
+                      title: "Scan QR Code",
+                      content: SizedBox(
+                        height: 400,
+                        width: 300,
+                        child: MobileScanner(
+                          onDetect: (BarcodeCapture barcodeCapture) {
+                            final String? code =
+                                barcodeCapture.barcodes.first.rawValue;
+                            print('Raw QR Code Data: $code');
 
+                            if (code != null && code.trim().startsWith('{')) {
+                              try {
+                                final decodedData = json.decode(code);
 
-
+                                if (decodedData is Map) {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => NetworkWrapper(
+                                        child: EquipementInfo(
+                                          data: decodedData,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  _showError(
+                                      context, 'Unexpected QR code format.');
+                                }
+                              } catch (e) {
+                                _showError(
+                                    context, 'Failed to decode QR code data.');
+                              }
+                            } else {
+                              _showError(context, 'Invalid QR code format.');
+                            }
+                          },
+                        ),
                       ),
+                      buttons: [
+                        DialogButton(
+                          onPressed: () => Navigator.pop(context),
+                          color: Colors.red,
+                          child: const Text(
+                            "Cancel",
+                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          ),
+                        ),
+                      ],
+                    ).show();
+                  },
+                ),
+              ),
 
+              // ─── MY RECORD ────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: ArgonButton(
+                  width: MediaQuery.of(context).size.width,
+                  height: 50,
+                  borderRadius: 8.0,
+                  elevation: 10,
+                  color: Colors.black,
+                  borderSide: const BorderSide(color: Colors.blue),
+                  child: Text(
+                    AppLocalizations.of(context)!.translate('MY RECORD'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: (startLoading, stopLoading, btnState) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            NetworkWrapper(child: MyRecords(id: widget.id)),
+                      ),
+                    );
+                  },
+                ),
+              ),
 
-
-
-
-
-              // Padding(
-              //   padding: const EdgeInsets.all(12.0),
-              //   child: ArgonButton(
-              //       width: MediaQuery.of(context).size.width,
-              //       height: 50,
-              //       borderRadius: 8.0,
-              //       elevation: 10,
-              //       color: Colors.black,
-              //       borderSide: BorderSide(color: Colors.blue),
-              //       child: Text(
-              //         AppLocalizations.of(context)!.translate('EQUIPMENT INFO'),
-              //         style: TextStyle(
-              //             color: Colors.white,
-              //             fontSize: 15,
-              //             fontWeight: FontWeight.w500),
-              //       ),
-              //       //   loader: Container(
-              //       //   padding: EdgeInsets.all(10),
-              //       //   child: SpinKitRotatingCircle(
-              //       //   color: tWhite,
-              //       //   // size: loaderWidth ,
-              //       //   ),
-              //       //   )   ,
-
-                  
-                  
-              //       onTap: (startLoading, stopLoading, btnState) {
-              //         _qrBarCodeScannerDialogPlugin.getScannedQrBarCode(
-              //             context: context,
-              //             onCode: (code) {
-              //               Navigator.push(
-              //                 context,
-              //                 MaterialPageRoute(
-              //                   builder: (context) => NetworkWrapper(
-              //                     child: EquipementInfo(
-              //                       data: json.decode(code!),
-              //                     ),
-              //                   ),
-              //                 ),
-              //               );
-              //             });
-              //         // Navigator.push(
-              //         //   context,
-              //         //   MaterialPageRoute(
-              //         //     builder: (context) => EquipementInfo(
-              //         //       data: const {
-              //         //         "report_id": 14,
-              //         //         // "equipment_id": "7",
-              //         //         // "checklist_id": "7",
-              //         //         // "equipment_category": "Fire Extinguisher",
-              //         //         // "equipment_sub_category":
-              //         //         //     "Water-Based Extinguishers",
-              //         //         // "equipment_type":
-              //         //         //     "For ordinary combustibles like wood, paper, and textiles",
-              //         //         // "checklist": "Testing Fire Estinguishers",
-              //         //         // "area_id": "8",
-              //         //         // "area": "Elevator Lobbies",
-              //         //         // "location":
-              //         //         //     "Every 75 feet along guest room corridors",
-              //         //         // "location_description":
-              //         //         //     "This ensures immediate access as guests and staff enter or exit the building, providing a quick response point in case of a fire.",
-              //         //         // "location_id": "8",
-              //         //         // "equipment_name":
-              //         //         //     "Aqueous Film-Forming Foam (AFFF) Extinguisher",
-              //         //         // "description":
-              //         //         //     "AFFF extinguishers contain a foam solution that forms a blanket or film over the fuel, suppressing the fire by smothering it and cutting off the oxygen supply.",
-              //         //         // "certificate_permission": "yes",
-              //         //         // "issuance_date": "2024-07-03",
-              //         //         // "expiry_date": "2025-07-03",
-              //         //         // "equipment_img":
-              //         //         //     "https:\/\/inspectoshield.com\/public\/uploads\/c94b72ad0f88e3f0ed4bd3ad2f970abb1719948133.jpg",
-              //         //         // "certificate_img":
-              //         //         //     "https:\/\/inspectoshield.com\/public\/uploads\/6d600bd036cca887fd71d396910b60d11719948133.png",
-              //         //         // "tags": [
-              //         //         //   "Pressure Gauge",
-              //         //         //   "Label and Instructions",
-              //         //         //   "Nozzle and Hose",
-              //         //         //   "Tamper Seal",
-              //         //         //   "Pressure Test",
-              //         //         //   "Siphon Tube",
-              //         //         //   "Seals and Pins"
-              //         //         // ]
-              //         //       },
-              //         //     ),
-              //         //   ),
-              //         // );
-              //       }
-
-
-
-
-              //   ),
-              // ),
-
-
-
-
-
-// //  new code below
-// Padding(
-//   padding: const EdgeInsets.all(12.0),
-//   child: ArgonButton(
-//     width: MediaQuery.of(context).size.width,
-//     height: 50,
-//     borderRadius: 8.0,
-//     elevation: 10,
-//     color: Colors.black,
-//     borderSide: BorderSide(color: Colors.blue),
-//     child: Text(
-//       AppLocalizations.of(context)!.translate('EQUIPMENT INFO'),
-//       style: TextStyle(
-//         color: Colors.white,
-//         fontSize: 15,
-//         fontWeight: FontWeight.w500,
-//       ),
-//     ),
-//     onTap: (startLoading, stopLoading, btnState) async {
-//       await showDialog(
-//         context: context,
-//         builder: (BuildContext context) {
-//           return AlertDialog(
-//             title: Text('Scan QR Code'),
-//             content: SizedBox(
-//               height: 400,
-//               width: 300,
-//               child: MobileScanner(
-//                 onDetect: (BarcodeCapture barcodeCapture) {
-//                   final String? code = barcodeCapture.barcodes.first.rawValue;
-//                   print('Raw QR Code Data: $code');
-
-//                   if (code != null && code.trim().startsWith('{')) {
-//                     try {
-//                       final decodedData = json.decode(code);
-
-//                       if (decodedData is Map) {
-//                         Navigator.pop(context); // Close scanner dialog first
-
-//                         // Navigate to Equipment Info screen
-//                         Navigator.push(
-//                           context,
-//                           MaterialPageRoute(
-//                             builder: (context) => NetworkWrapper(
-//                               child: EquipementInfo(
-//                                 data: decodedData,
-//                               ),
-//                             ),
-//                           ),
-//                         );
-//                       } else {
-//                         _showError(context, 'Unexpected QR code format.');
-//                       }
-//                     } catch (e) {
-//                       _showError(context, 'Failed to decode QR code data.');
-//                     }
-//                   } else {
-//                     _showError(context, 'Invalid QR code format.');
-//                   }
-//                 },
-//               ),
-//             ),
-//           );
-//         },
-//       );
-//     },
-//   ),
-// ),
-
-Padding(
-  padding: const EdgeInsets.all(12.0),
-  child: ArgonButton(
-    width: MediaQuery.of(context).size.width,
-    height: 50,
-    borderRadius: 8.0,
-    elevation: 10,
-    color: Colors.black,
-    borderSide: BorderSide(color: Colors.blue),
-    child: Text(
-      AppLocalizations.of(context)!.translate('EQUIPMENT INFO'),
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: 15,
-        fontWeight: FontWeight.w500,
-      ),
-    ),
-    onTap: (startLoading, stopLoading, btnState) async {
-      Alert(
-        context: context,
-        title: "Scan QR Code",
-        content: SizedBox(
-          height: 400,
-          width: 300,
-          child: MobileScanner(
-            onDetect: (BarcodeCapture barcodeCapture) {
-              final String? code = barcodeCapture.barcodes.first.rawValue;
-              print('Raw QR Code Data: \$code');
-
-              if (code != null && code.trim().startsWith('{')) {
-                try {
-                  final decodedData = json.decode(code);
-
-                  if (decodedData is Map) {
-                    Navigator.pop(context); // Close scanner dialog first
-
+              // ─── MY ACCOUNT ───────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: ArgonButton(
+                  width: MediaQuery.of(context).size.width,
+                  height: 50,
+                  borderRadius: 8.0,
+                  elevation: 10,
+                  color: Colors.black,
+                  borderSide: const BorderSide(color: Colors.blue),
+                  child: Text(
+                    AppLocalizations.of(context)!.translate('MY ACCOUNT'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: (startLoading, stopLoading, btnState) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => NetworkWrapper(
-                          child: EquipementInfo(
-                            data: decodedData,
+                          child: Profile(
+                            id: widget.id,
+                            name: widget.name,
+                            company: widget.company,
+                            branch: widget.branch,
+                            email: widget.email,
+                            password: widget.password,
+                            image: widget.image,
+                            contact: widget.contact,
                           ),
                         ),
                       ),
                     );
-                  } else {
-                    _showError(context, 'Unexpected QR code format.');
-                  }
-                } catch (e) {
-                  _showError(context, 'Failed to decode QR code data.');
-                }
-              } else {
-                _showError(context, 'Invalid QR code format.');
-              }
-            },
-          ),
-        ),
-        buttons: [
-          DialogButton(
-            child: Text(
-              "Cancel",
-              style: TextStyle(color: Colors.white, fontSize: 18),
-            ),
-            onPressed: () => Navigator.pop(context),
-            color: Colors.red,
-          ),
-        ],
-      ).show();
-    },
-  ),
-),
-
-
-    Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: ArgonButton(
-                  width: MediaQuery.of(context).size.width,
-                  height: 50,
-                  borderRadius: 8.0,
-                  elevation: 10,
-                  color:  Colors.black,
-                  borderSide: BorderSide(color: Colors.blue),
-                  child: Text(
-                    AppLocalizations.of(context)!.translate('MY RECORD'),
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500),
-                  ),
-                  
-                  // loader: Container(
-                  //   padding: EdgeInsets.all(10),
-                  //   child: SpinKitRotatingCircle(
-                  //     color: tWhite,
-                  //     // size: loaderWidth ,
-                  //   ),
-                  // ),
-                  onTap: (startLoading, stopLoading, btnState) {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => NetworkWrapper(
-                                child: MyRecords(id: widget.id))));
                   },
                 ),
               ),
+
+              // ─── LOGOUT ───────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: ArgonButton(
@@ -634,68 +664,38 @@ Padding(
                   borderRadius: 8.0,
                   elevation: 10,
                   color: Colors.black,
-                  borderSide: BorderSide(color: Colors.blue),
-                  child: Text(
-                    AppLocalizations.of(context)!.translate('MY ACCOUNT'),
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500),
-                  ),
-                  // loader: Container(
-                  //   padding: EdgeInsets.all(10),
-                  //   child: SpinKitRotatingCircle(
-                  //     color: tWhite,
-                  //     // size: loaderWidth ,
-                  //   ),
-                  // ),
-                  onTap: (startLoading, stopLoading, btnState) {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => NetworkWrapper(
-                                  child: Profile(
-                                    id: widget.id,
-                                    name: widget.name,
-                                    company: widget.company,
-                                    branch: widget.branch,
-                                    email: widget.email,
-                                    password: widget.password,
-                                    image: widget.image,
-                                    contact: widget.contact,
-                                  ),
-                                )));
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: ArgonButton(
-                  width: MediaQuery.of(context).size.width,
-                  height: 50,
-                  borderRadius: 8.0,
-                  elevation: 10,
-                  color: Colors.black,
-                  borderSide: BorderSide(color: Colors.blue),
+                  borderSide: const BorderSide(color: Colors.blue),
                   child: Text(
                     AppLocalizations.of(context)!.translate('LOGOUT'),
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                  // loader: Container(
-                  //   padding: EdgeInsets.all(10),
-                  //   child: SpinKitRotatingCircle(
-                  //     color: tWhite,
-                  //     // size: loaderWidth ,
-                  //   ),
-                  // ),
-                  onTap: (startLoading, stopLoading, btnState) {
-                    Navigator.pushReplacement(
+                  onTap: (startLoading, stopLoading, btnState) async {
+                    startLoading();
+
+                    try {
+                      await NotificationService().deleteToken();
+                      print("FCM Token Deleted");
+                    } catch (e) {
+                      print("Error deleting token: $e");
+                    }
+
+                    SharedPreferences prefs =
+                        await SharedPreferences.getInstance();
+                    await prefs.clear();
+
+                    stopLoading();
+
+                    if (context.mounted) {
+                      Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(
-                            builder: (context) => const LoginScreen()));
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        (route) => false,
+                      );
+                    }
                   },
                 ),
               ),
@@ -706,6 +706,316 @@ Padding(
     );
   }
 
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+}
 
-  
+// ══════════════════════════════════════════════════════════════════════════════
+// ✅ ALARM POPUP WIDGET — Spinning ambulance light + alarm sound
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _AlarmPopup extends StatelessWidget {
+  final Future<Map<String, dynamic>?> Function() fetchPendingInspections;
+  final VoidCallback onClose;
+  final Widget Function(Map<String, dynamic>, int) buildCard;
+
+  const _AlarmPopup({
+    required this.fetchPendingInspections,
+    required this.onClose,
+    required this.buildCard,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F172A),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF1E293B), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.5),
+              blurRadius: 30,
+              spreadRadius: 5,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ─── Header ───────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+              decoration: const BoxDecoration(
+                color: Color(0xFF1E293B),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                children: [
+                  // ✅ GIF — Flutter khud animate karega, koi extra code nahi
+                  Image.asset(
+                    'assets/alarm_light.gif',
+                    width: 90,
+                    height: 90,
+                  ),
+                  const SizedBox(height: 14),
+
+                  // ─── Title Row ──────────────────────────────────
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.pending_actions_rounded,
+                          color: Color(0xFFEF4444),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Pending Inspections',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Action required',
+                              style: TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // ─── Close Button ───────────────────────────
+                      GestureDetector(
+                        onTap: onClose,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF334155),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            color: Color(0xFF94A3B8),
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // ─── Content ──────────────────────────────────────────
+            Flexible(
+              child: FutureBuilder<Map<String, dynamic>?>(
+                future: fetchPendingInspections(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 50),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(
+                            color: Color(0xFF3B82F6),
+                            strokeWidth: 2.5,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Fetching inspections...',
+                            style: TextStyle(
+                              color: Color(0xFF64748B),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  if (snapshot.hasError || !snapshot.hasData) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.wifi_off_rounded,
+                            color: Color(0xFF475569),
+                            size: 40,
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            'Could not load inspections',
+                            style: TextStyle(
+                              color: Color(0xFF64748B),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  final data = snapshot.data!;
+                  final inspections = data['data'] ?? [];
+                  final count = data['count'] ?? 0;
+
+                  if (inspections.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF22C55E).withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check_circle_outline_rounded,
+                              color: Color(0xFF22C55E),
+                              size: 36,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          const Text(
+                            'All caught up!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'No pending inspections found.',
+                            style: TextStyle(
+                              color: Color(0xFF64748B),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444).withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: const Color(0xFFEF4444).withOpacity(0.25),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.info_outline_rounded,
+                                color: Color(0xFFEF4444),
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '$count inspection${count == 1 ? '' : 's'} require your attention',
+                                style: const TextStyle(
+                                  color: Color(0xFFEF4444),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        ...List.generate(
+                          inspections.length,
+                          (index) => buildCard(inspections[index], index),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // ─── Footer ───────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              decoration: const BoxDecoration(
+                color: Color(0xFF1E293B),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        backgroundColor: const Color(0xFF334155),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: onClose,
+                      child: const Text(
+                        'Dismiss',
+                        style: TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

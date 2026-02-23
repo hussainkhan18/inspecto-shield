@@ -59,30 +59,29 @@ class NetworkService {
   //     ),
   //   );
   // }
-  
-void showDialogBox(BuildContext context) {
-  Alert(
-    context: context,
-    title: "No Connection",
-    content: Text("Please check your internet connectivity"),
-    buttons: [
-      DialogButton(
-        child: Text("OK", style: TextStyle(color: Colors.white)),
-        onPressed: () async {
-          isAlertSet = false;
-          Navigator.pop(context);
-          isDeviceConnected = await InternetConnectionChecker().hasConnection;
-          if (!isDeviceConnected && !isAlertSet) {
-            showDialogBox(context);
-            isAlertSet = true;
-          }
-        },
-        color: Colors.black,
-      ),
-    ],
-  ).show();
-}
 
+  void showDialogBox(BuildContext context) {
+    Alert(
+      context: context,
+      title: "No Connection",
+      content: const Text("Please check your internet connectivity"),
+      buttons: [
+        DialogButton(
+          onPressed: () async {
+            isAlertSet = false;
+            Navigator.pop(context);
+            isDeviceConnected = await InternetConnectionChecker().hasConnection;
+            if (!isDeviceConnected && !isAlertSet) {
+              showDialogBox(context);
+              isAlertSet = true;
+            }
+          },
+          color: Colors.black,
+          child: Text("OK", style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    ).show();
+  }
 
   void dispose() {
     subscription.cancel();
