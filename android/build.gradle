@@ -1,22 +1,11 @@
-buildscript {
-    ext.kotlin_version = '1.9.0'
-    repositories {
-        google()
-        mavenCentral()
-    }
-    
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-    }
-
 allprojects {
+     ext.kotlin_version = "2.0.21" 
     repositories {
         google()
         mavenCentral()
     }
 }
+
 
 rootProject.buildDir = '../build'
 subprojects {
@@ -24,6 +13,18 @@ subprojects {
 }
 subprojects {
     project.evaluationDependsOn(':app')
+    
+    // Use a more robust way to set namespace if missing
+    project.plugins.whenPluginAdded { plugin ->
+        if (plugin.class.name.startsWith('com.android.build.gradle.LibraryPlugin') ||
+            plugin.class.name.startsWith('com.android.build.gradle.AppPlugin')) {
+            project.android {
+                if (namespace == null) {
+                    namespace = "com.inspecto.shield.hashpixels.${project.name.replace('-', '.')}"
+                }
+            }
+        }
+    }
 }
 
 tasks.register("clean", Delete) {

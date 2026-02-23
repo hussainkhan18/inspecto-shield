@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 class DisplayScreen extends StatelessWidget {
   final Map<String, dynamic> data;
 
-  DisplayScreen({required this.data});
+  const DisplayScreen({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Inspection Details'),
+        title: const Text('Inspection Details'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

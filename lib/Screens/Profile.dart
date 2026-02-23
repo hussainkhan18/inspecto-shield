@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:loading_icon_button/loading_icon_button.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:hash_mufattish/services/notification_service.dart';
 
 class Profile extends StatefulWidget {
   int id;
@@ -65,7 +66,7 @@ class _ProfileState extends State<Profile> {
 
       if (response.statusCode == 200) {
         // Create a temporary file to store the downloaded image
-        var tempDir = await Directory.systemTemp;
+        var tempDir = Directory.systemTemp;
         var tempImagePath = '${tempDir.path}/temp_image.jpg';
         var file = File(tempImagePath);
 
@@ -96,11 +97,14 @@ class _ProfileState extends State<Profile> {
 
   Future<void> login() async {
     try {
+      String? fcmToken = await NotificationService().getToken();
       final response = await http
           .post(Uri.parse('https://inspectoshield.com/api/login'), body: {
         "email": email.text,
         "password": password.text,
+        if (fcmToken != null) "fcm_token": fcmToken,
       });
+
       Map<dynamic, dynamic> jsonResponse = jsonDecode(response.body);
       print(jsonResponse);
       if (jsonResponse["success"] == true) {
@@ -216,16 +220,16 @@ class _ProfileState extends State<Profile> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
+              const SizedBox(
                 height: 50,
               ),
               Center(
                 child: Text(
                   AppLocalizations.of(context)!.translate('USER ACCOUNT'),
-                  style: TextStyle(fontSize: 18),
+                  style: const TextStyle(fontSize: 18),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 5,
               ),
               Center(
@@ -244,36 +248,38 @@ class _ProfileState extends State<Profile> {
                 padding: const EdgeInsets.fromLTRB(3.0, 0, 0, 3),
                 child: Text(
                   AppLocalizations.of(context)!.translate('Name'),
-                  style: TextStyle(fontSize: 15),
+                  style: const TextStyle(fontSize: 15),
                 ),
               ),
               Container(
                 height: 40,
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.blue),
                   borderRadius: BorderRadius.circular(5),
                 ),
                 child: TextField(
                   controller: name,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     border: InputBorder.none,
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 10,
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(3.0, 0, 0, 3),
                 child: Text(
                   AppLocalizations.of(context)!.translate('Company'),
-                  style: TextStyle(fontSize: 15),
+                  style: const TextStyle(fontSize: 15),
                 ),
               ),
               Container(
                 height: 40,
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.blue),
                   borderRadius: BorderRadius.circular(5),
@@ -282,24 +288,25 @@ class _ProfileState extends State<Profile> {
                 child: TextField(
                   readOnly: true,
                   controller: company,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     border: InputBorder.none,
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 10,
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(3.0, 0, 0, 3),
                 child: Text(
                   AppLocalizations.of(context)!.translate('Branch'),
-                  style: TextStyle(fontSize: 15),
+                  style: const TextStyle(fontSize: 15),
                 ),
               ),
               Container(
                 height: 40,
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
                   color: Colors.grey[100],
                   border: Border.all(color: Colors.blue),
@@ -308,48 +315,50 @@ class _ProfileState extends State<Profile> {
                 child: TextField(
                   readOnly: true,
                   controller: branch,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     border: InputBorder.none,
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 10,
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(3.0, 0, 0, 3),
                 child: Text(
                   AppLocalizations.of(context)!.translate('Contact No'),
-                  style: TextStyle(fontSize: 15),
+                  style: const TextStyle(fontSize: 15),
                 ),
               ),
               Container(
                 height: 40,
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.blue),
                   borderRadius: BorderRadius.circular(5),
                 ),
                 child: TextField(
                   controller: contact,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     border: InputBorder.none,
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 10,
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(3.0, 0, 0, 3),
                 child: Text(
                   AppLocalizations.of(context)!.translate('Email'),
-                  style: TextStyle(fontSize: 15),
+                  style: const TextStyle(fontSize: 15),
                 ),
               ),
               Container(
                 height: 40,
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.blue),
                   borderRadius: BorderRadius.circular(5),
@@ -358,24 +367,25 @@ class _ProfileState extends State<Profile> {
                 child: TextField(
                   readOnly: true,
                   controller: email,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     border: InputBorder.none,
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 10,
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(3.0, 0, 0, 3),
                 child: Text(
                   AppLocalizations.of(context)!.translate('Password'),
-                  style: TextStyle(fontSize: 15),
+                  style: const TextStyle(fontSize: 15),
                 ),
               ),
               Container(
                 height: 40,
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.blue),
                   borderRadius: BorderRadius.circular(5),
@@ -383,12 +393,12 @@ class _ProfileState extends State<Profile> {
                 child: TextField(
                   obscureText: true,
                   controller: password,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     border: InputBorder.none,
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 20,
               ),
               Align(
@@ -399,10 +409,10 @@ class _ProfileState extends State<Profile> {
                   borderRadius: 10.0,
                   elevation: 10,
                   color: Colors.black,
-                  borderSide: BorderSide(color: Colors.blue),
+                  borderSide: const BorderSide(color: Colors.blue),
                   child: Text(
                     AppLocalizations.of(context)!.translate('SAVE'),
-                    style: TextStyle(
+                    style: const TextStyle(
                         color: Colors.white,
                         fontSize: 15,
                         fontWeight: FontWeight.w500),

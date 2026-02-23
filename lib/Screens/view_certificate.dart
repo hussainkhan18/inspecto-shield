@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class FullScreenImageView extends StatelessWidget {
   final String imageUrl;
 
-  FullScreenImageView({required this.imageUrl});
+  const FullScreenImageView({super.key, required this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -11,14 +11,14 @@ class FullScreenImageView extends StatelessWidget {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        leading: IconButton(  
-          icon: Icon(Icons.close, color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: Center(
         child: InteractiveViewer(
-          boundaryMargin: EdgeInsets.all(20.0),
+          boundaryMargin: const EdgeInsets.all(20.0),
           minScale: 0.5,
           maxScale: 5.0,
           child: ClipRect(
@@ -37,7 +37,7 @@ class FullScreenImageView extends StatelessWidget {
                 );
               },
               errorBuilder: (context, error, stackTrace) =>
-                  Icon(Icons.error, color: Colors.white),
+                  const Icon(Icons.error, color: Colors.white),
             ),
           ),
         ),
