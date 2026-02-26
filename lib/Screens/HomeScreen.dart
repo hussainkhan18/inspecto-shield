@@ -2,31 +2,34 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:hash_mufattish/LanguageTranslate/app_localizations.dart';
+import 'package:hash_mufattish/Providers/upcoming_inspection_provider.dart';
 import 'package:hash_mufattish/Screens/Profile.dart';
 import 'package:hash_mufattish/Screens/equipment_info.dart';
 import 'package:hash_mufattish/Screens/internet_error_popup.dart';
 import 'package:hash_mufattish/Screens/login.dart';
 import 'package:hash_mufattish/Screens/my_record.dart';
 import 'package:hash_mufattish/Screens/new_inspection.dart';
+import 'package:hash_mufattish/Screens/upcoming_inspection_screen.dart';
 import 'package:hash_mufattish/services/notification_service.dart';
 import 'package:loading_icon_button/loading_icon_button.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:provider/provider.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
 
 class HomeScreen extends StatefulWidget {
-  int id;
-  String name;
-  String company;
-  String branch;
-  String email;
-  String password;
-  String image;
-  String contact;
+  final int id;
+  final String name;
+  final String company;
+  final String branch;
+  final String email;
+  final String password;
+  final String image;
+  final String contact;
 
-  HomeScreen({
+  const HomeScreen({
     super.key,
     required this.id,
     required this.name,
@@ -43,7 +46,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final MobileScannerController _controller = MobileScannerController();
+  // final MobileScannerController _controller = MobileScannerController();
   final MobileScannerController controller = MobileScannerController();
   StreamSubscription<Object?>? _subscription;
   String? scannedCode;
@@ -115,7 +118,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showPendingInspectionsPopup() async {
-    // ✅ Alarm sound play karo
     try {
       await _audioPlayer.stop();
       await _audioPlayer.setVolume(0.4);
@@ -140,12 +142,10 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     ).then((_) {
-      // Barrier dismiss se band ho tab bhi sound stop karo
       _audioPlayer.stop();
     });
   }
 
-  // ✅ Clean modern inspection card
   Widget _buildInspectionCard(Map<String, dynamic> inspection, int index) {
     final status = inspection['status'] ?? 'Pending';
 
@@ -187,7 +187,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Column(
         children: [
-          // ── Top row: status accent + equipment name ──────────────
           Container(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
             decoration: BoxDecoration(
@@ -241,8 +240,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-
-          // ── Details grid ─────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
             child: Column(
@@ -411,7 +408,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: 8.0,
                   elevation: 10,
                   color: Colors.black,
-                  borderSide: const BorderSide(color: Colors.blue),
+                  borderSide: const BorderSide(color: Colors.teal),
                   child: const Text(
                     'NEW INSPECTION',
                     style: TextStyle(
@@ -518,7 +515,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: 8.0,
                   elevation: 10,
                   color: Colors.black,
-                  borderSide: const BorderSide(color: Colors.blue),
+                  borderSide: const BorderSide(color: Colors.teal),
                   child: Text(
                     AppLocalizations.of(context)!.translate('EQUIPMENT INFO'),
                     style: const TextStyle(
@@ -585,6 +582,43 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
+              // ─── UPCOMING INSPECTION ──────────────────────────────
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: ArgonButton(
+                  width: MediaQuery.of(context).size.width,
+                  height: 50,
+                  borderRadius: 8.0,
+                  elevation: 10,
+                  color: Colors.black,
+                  borderSide: const BorderSide(color: Colors.teal),
+                  child: Text(
+                    AppLocalizations.of(context)!
+                        .translate('UPCOMING INSPECTION'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: (startLoading, stopLoading, btnState) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => NetworkWrapper(
+                          child: ChangeNotifierProvider(
+                            create: (_) => UpcomingInspectionProvider(),
+                            child: UpcomingInspectionScreen(
+                              userId: widget.id,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
               // ─── MY RECORD ────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -594,7 +628,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: 8.0,
                   elevation: 10,
                   color: Colors.black,
-                  borderSide: const BorderSide(color: Colors.blue),
+                  borderSide: const BorderSide(color: Colors.teal),
                   child: Text(
                     AppLocalizations.of(context)!.translate('MY RECORD'),
                     style: const TextStyle(
@@ -624,7 +658,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: 8.0,
                   elevation: 10,
                   color: Colors.black,
-                  borderSide: const BorderSide(color: Colors.blue),
+                  borderSide: const BorderSide(color: Colors.teal),
                   child: Text(
                     AppLocalizations.of(context)!.translate('MY ACCOUNT'),
                     style: const TextStyle(
@@ -664,7 +698,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: 8.0,
                   elevation: 10,
                   color: Colors.black,
-                  borderSide: const BorderSide(color: Colors.blue),
+                  borderSide: const BorderSide(color: Colors.teal),
                   child: Text(
                     AppLocalizations.of(context)!.translate('LOGOUT'),
                     style: const TextStyle(
@@ -715,7 +749,7 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// ✅ ALARM POPUP WIDGET — Spinning ambulance light + alarm sound
+// ✅ ALARM POPUP WIDGET
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _AlarmPopup extends StatelessWidget {
@@ -765,15 +799,12 @@ class _AlarmPopup extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  // ✅ GIF — Flutter khud animate karega, koi extra code nahi
                   Image.asset(
                     'assets/alarm_light.gif',
                     width: 90,
                     height: 90,
                   ),
                   const SizedBox(height: 14),
-
-                  // ─── Title Row ──────────────────────────────────
                   Row(
                     children: [
                       Container(
@@ -814,7 +845,6 @@ class _AlarmPopup extends StatelessWidget {
                           ],
                         ),
                       ),
-                      // ─── Close Button ───────────────────────────
                       GestureDetector(
                         onTap: onClose,
                         child: Container(
