@@ -17,11 +17,11 @@ class MyRecords extends StatefulWidget {
 
 class _MyRecordsState extends State<MyRecords> {
   List<dynamic> recordList = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-
     getRecordList();
   }
 
@@ -32,7 +32,6 @@ class _MyRecordsState extends State<MyRecords> {
       );
       if (response.statusCode == 200) {
         Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-        List<dynamic> data = jsonResponse["data"]; // Extract the 'data' list
         List<dynamic> tempEquipments = [];
         for (Map i in jsonResponse["data"]) {
           tempEquipments.add([
@@ -42,190 +41,279 @@ class _MyRecordsState extends State<MyRecords> {
             i["location_name"],
             i["area"],
           ]);
-          // print("Updated at: ${i["updated_at"]}");
         }
-
         setState(() {
           recordList = tempEquipments;
+          isLoading = false;
         });
       } else {
-        // Handle the case when the server doesn't return a 200 OK response
+        setState(() => isLoading = false);
         print("Failed to load data");
       }
     } catch (e) {
+      setState(() => isLoading = false);
       print({"error": e.toString()});
     }
   }
 
+  String formatWithLineBreaks(String originalString) {
+    List<String> words = originalString.split(' ');
+    String result = '';
+    String currentLine = '';
+    for (String word in words) {
+      if ((currentLine + word).length > 15) {
+        result += '${currentLine.trim()}\n';
+        currentLine = '$word ';
+      } else {
+        currentLine += '$word ';
+      }
+    }
+    result += currentLine.trim();
+    return result;
+  }
+
   @override
   Widget build(BuildContext context) {
-    print(recordList);
+    const primaryColor = Color(0xff0DC5B9);
+
     return Scaffold(
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(
-            height: 50,
-          ),
-          Text(
-            AppLocalizations.of(context)!.translate("My Records"),
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(
-            height: 30,
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Expanded(
-                  child: Text(
-                    AppLocalizations.of(context)!.translate("EQUIPMENT"),
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 15),
-                    child: Text(
-                      AppLocalizations.of(context)!.translate("WHEN"),
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                      textAlign: TextAlign.center,
+      backgroundColor: const Color(0xffF2FAFA),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Header with iOS back button ──────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(8, 10, 20, 10),
+              color: Colors.white,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // iOS style back button
+                  CupertinoButton(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          CupertinoIcons.chevron_back,
+                          size: 25,
+                        ),
+                        SizedBox(width: 2),
+                      ],
                     ),
                   ),
-                ),
-                Expanded(
-                  child: Text(
-                    AppLocalizations.of(context)!.translate("LOCATION"),
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                    textAlign: TextAlign.center,
+                  // Title centered
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.of(context)!.translate("My Records"),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xff1C2B2B),
+                        letterSpacing: 0.2,
+                      ),
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: Text(
-                    AppLocalizations.of(context)!.translate("AREA"),
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                    textAlign: TextAlign.start,
-                  ),
-                ),
-              ],
+                  // Record count badge (right side to balance layout)
+                  if (!isLoading && recordList.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: primaryColor.withOpacity(0.13),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${recordList.length}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: primaryColor,
+                        ),
+                      ),
+                    )
+                  else
+                    // Spacer to keep title centered when badge not visible
+                    const SizedBox(width: 44),
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: recordList.isEmpty
-                ? const Center(
-                    child:
-                        CircularProgressIndicator()) // Show circular loading indicator when data is loading
-                : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: recordList.length,
-                    itemBuilder: (context, index) {
-                      String datetimeStr = recordList[index][1].toString();
 
-                      // Parse the datetime string into a DateTime object
-                      DateTime datetime = DateTime.parse(datetimeStr);
+            const SizedBox(height: 14),
 
-                      // Format the date and time separately
-                      String formattedDate =
-                          DateFormat('yyyy-MM-dd').format(datetime);
-                      String formattedTime =
-                          DateFormat('hh:mm:ss').format(datetime);
+            // ── Column Header Row ────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  _headerLabel(context, "EQUIPMENT", flex: 5),
+                  _headerLabel(context, "WHEN", flex: 4),
+                  _headerLabel(context, "LOCATION", flex: 4),
+                  _headerLabel(context, "AREA", flex: 4),
+                ],
+              ),
+            ),
 
-                      // Combine date and time with a newline character
-                      String formattedDateTime =
-                          "$formattedDate\n$formattedTime";
+            const SizedBox(height: 6),
 
-                      String formatWithLineBreaks(String originalString) {
-                        List<String> words = originalString
-                            .split(' '); // Split the string into words.
-                        String result = '';
-                        String currentLine = '';
-
-                        for (String word in words) {
-                          // If adding the next word exceeds 15 characters, append the current line to result and reset it.
-                          if ((currentLine + word).length > 15) {
-                            result +=
-                                '${currentLine.trim()}\n'; // Trim to remove any leading spaces before adding a line break.
-                            currentLine =
-                                '$word '; // Start a new line with the current word.
-                          } else {
-                            currentLine +=
-                                '$word '; // Add the current word to the current line.
-                          }
-                        }
-
-                        result += currentLine.trim();
-                        // Add the last line to the result.
-                        return result;
-                      }
-
-                      return Padding(
-                        padding: const EdgeInsets.only(
-                            right: 9.0, left: 9, bottom: 8),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(7),
-                            color: const Color(0xff0DC5B9),
-                            border: const Border(
-                              bottom: BorderSide(
-                                color: Colors.black,
-                                width: 1.0,
-                              ),
-                            ),
-                          ),
-                          padding: const EdgeInsets.only(
-                              top: 10, bottom: 10, left: 15),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+            // ── List ─────────────────────────────────────────
+            Expanded(
+              child: isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: primaryColor,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : recordList.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              // SizedBox(
-                              //   width: 1,
-                              // ),
-                              Expanded(
-                                child: Text(
-                                  // Equipment Text
-                                  recordList[index][0]
-                                              .toString()
-                                              .split(' ')
-                                              .length ==
-                                          3
-                                      ? '${recordList[index][0].toString().split(' ').take(2).join(' ')}\n${recordList[index][0].toString().split(' ').last}'
-                                      : recordList[index][0].toString(),
-                                  textAlign: TextAlign.start,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  // Time Text
-                                  formattedDateTime,
-                                  textAlign: TextAlign.start,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  // Location Name
-                                  recordList[index][2].toString(),
-                                  textAlign: TextAlign.start,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  // Location Description
-                                  formatWithLineBreaks(
-                                      recordList[index][4].toString()),
-                                  textAlign: TextAlign.start,
-                                ),
+                              Icon(Icons.folder_open_outlined,
+                                  size: 44,
+                                  color: primaryColor.withOpacity(0.35)),
+                              const SizedBox(height: 10),
+                              Text(
+                                AppLocalizations.of(context)!
+                                    .translate("No Records Found"),
+                                style: TextStyle(
+                                    fontSize: 14, color: Colors.grey.shade500),
                               ),
                             ],
                           ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                          itemCount: recordList.length,
+                          itemBuilder: (context, index) {
+                            // ── Date ────────────────────────────
+                            String datetimeStr =
+                                recordList[index][1].toString();
+                            DateTime datetime = DateTime.parse(datetimeStr);
+                            String formattedDate =
+                                DateFormat('dd MMM yy').format(datetime);
+                            String formattedTime =
+                                DateFormat('hh:mm a').format(datetime);
+
+                            // ── Equipment name (unchanged logic) ──
+                            String equipmentText =
+                                recordList[index][0].toString();
+                            String displayEquipment = equipmentText
+                                        .split(' ')
+                                        .length ==
+                                    3
+                                ? '${equipmentText.split(' ').take(2).join(' ')}\n${equipmentText.split(' ').last}'
+                                : equipmentText;
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 9),
+                              decoration: BoxDecoration(
+                                color: const Color(0xff0DC5B9),
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xff0DC5B9)
+                                        .withOpacity(0.25),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 11),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      flex: 5,
+                                      child: Text(
+                                        displayEquipment,
+                                        style: const TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 4,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            formattedDate,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          Text(
+                                            formattedTime,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.white
+                                                  .withOpacity(0.82),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 4,
+                                      child: Text(
+                                        recordList[index][2].toString(),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 4,
+                                      child: Text(
+                                        formatWithLineBreaks(
+                                            recordList[index][4].toString()),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-          )
-        ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _headerLabel(BuildContext context, String key, {int flex = 1}) {
+    return Expanded(
+      flex: flex,
+      child: Text(
+        AppLocalizations.of(context)!.translate(key),
+        style: const TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          color: Color(0xff0DC5B9),
+          letterSpacing: 0.9,
+        ),
       ),
     );
   }
