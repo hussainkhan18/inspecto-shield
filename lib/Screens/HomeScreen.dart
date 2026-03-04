@@ -18,6 +18,7 @@ import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
+import 'package:hash_mufattish/services/secure_storage_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final int id;
@@ -25,7 +26,7 @@ class HomeScreen extends StatefulWidget {
   final String company;
   final String branch;
   final String email;
-  final String password;
+  // final String password;
   final String image;
   final String contact;
 
@@ -36,7 +37,7 @@ class HomeScreen extends StatefulWidget {
     required this.company,
     required this.branch,
     required this.email,
-    required this.password,
+    // required this.password,
     required this.image,
     required this.contact,
   });
@@ -452,7 +453,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           branch: widget.branch,
                                           company: widget.company,
                                           email: widget.email,
-                                          password: widget.password,
+                                          // password: widget.password,
                                           image: widget.image,
                                           contact: widget.contact,
                                         ),
@@ -678,7 +679,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             company: widget.company,
                             branch: widget.branch,
                             email: widget.email,
-                            password: widget.password,
+                            // password: widget.password,
                             image: widget.image,
                             contact: widget.contact,
                           ),
@@ -720,6 +721,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     SharedPreferences prefs =
                         await SharedPreferences.getInstance();
                     await prefs.clear();
+                    await SecureStorageService.clearAll();
 
                     stopLoading();
 

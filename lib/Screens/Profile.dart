@@ -16,7 +16,7 @@ class Profile extends StatefulWidget {
   String company;
   String branch;
   String email;
-  String password;
+  // String password;
   String image;
   String contact;
 
@@ -27,7 +27,7 @@ class Profile extends StatefulWidget {
     required this.company,
     required this.branch,
     required this.email,
-    required this.password,
+    // required this.password,
     required this.image,
     required this.contact,
   });
@@ -64,7 +64,7 @@ class _ProfileState extends State<Profile> {
     branch.text = widget.branch;
     contact.text = widget.contact;
     email.text = widget.email;
-    password.text = widget.password;
+    // password.text = widget.password;
     super.initState();
   }
 
@@ -120,7 +120,7 @@ class _ProfileState extends State<Profile> {
               company: jsonResponse["user"]["company_name"],
               branch: jsonResponse["user"]["branch_name"],
               email: jsonResponse["user"]["email"],
-              password: password.text,
+              // password: password.text,
               image: jsonResponse["user"]["profile_img"],
               contact: jsonResponse["user"]["contact_number"],
             ),

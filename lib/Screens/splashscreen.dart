@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hash_mufattish/Screens/internet_error_popup.dart';
 import 'package:hash_mufattish/Screens/login.dart';
 import 'package:hash_mufattish/Screens/HomeScreen.dart';
+import 'package:hash_mufattish/services/secure_storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -15,31 +16,34 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _checkLoginAndNavigate();
+    _checkSessionAndNavigate();
   }
 
-  Future<void> _checkLoginAndNavigate() async {
-    // Just to show splash for a moment
-    await Future.delayed(const Duration(seconds: 1));
+  Future<void> _checkSessionAndNavigate() async {
+    // Brief splash delay
+    await Future.delayed(const Duration(seconds: 5));
 
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token'); // saved in login screen
-    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+    // FIXED: Read auth token from SecureStorage (encrypted)
+    // Non-sensitive display data still read from SharedPreferences
+    final String? token = await SecureStorageService.getToken();
+    final bool isLoggedIn = await SecureStorageService.isLoggedIn();
 
     if (!mounted) return;
 
     if (token != null && token.isNotEmpty && isLoggedIn) {
-      // Read stored user data
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+
       final int? id = prefs.getInt('id');
       final String name = prefs.getString('name') ?? '';
       final String email = prefs.getString('email') ?? '';
-      final String password = prefs.getString('password') ?? '';
       final String image = prefs.getString('image') ?? '';
       final String contact = prefs.getString('contact') ?? '';
       final String company = prefs.getString('company') ?? '';
       final String branch = prefs.getString('branch') ?? '';
 
-      if (id != null) {
+      // Ensure we have a valid user ID before auto-login
+      if (id != null && id > 0) {
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -50,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 company: company,
                 branch: branch,
                 email: email,
-                password: password,
+                // FIXED: password field removed — no longer passed anywhere
                 image: image,
                 contact: contact,
               ),
@@ -61,7 +65,8 @@ class _SplashScreenState extends State<SplashScreen> {
       }
     }
 
-    // If no token or data is incomplete => go to LoginScreen
+    // No valid session → go to login
+    if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -73,10 +78,9 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
+      body: SizedBox(
         height: double.infinity,
         width: double.infinity,
-        color: Colors.white,
         child: Image.asset(
           "assets/Splash.gif",
           fit: BoxFit.fill,
