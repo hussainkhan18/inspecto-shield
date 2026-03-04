@@ -7,9 +7,9 @@ import 'package:loading_icon_button/loading_icon_button.dart';
 import 'package:http/http.dart' as http;
 
 class EquipementInfo extends StatefulWidget {
-  Map data;
+  final Map data;
 
-  EquipementInfo({super.key, required this.data});
+  const EquipementInfo({super.key, required this.data});
 
   @override
   State<EquipementInfo> createState() => _EquipementInfoState();

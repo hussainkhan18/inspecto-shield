@@ -1,35 +1,30 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:hash_mufattish/LanguageTranslate/app_localizations.dart';
 import 'package:hash_mufattish/Providers/checklist_Provider.dart';
-import 'package:hash_mufattish/Providers/local_Provider.dart';
 import 'package:hash_mufattish/Screens/HomeScreen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:loading_icon_button/loading_icon_button.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
-import 'package:image/image.dart' as img;
-import 'package:path_provider/path_provider.dart';
 import 'package:lottie/lottie.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 
 class NewInspection extends StatefulWidget {
-  Map data;
-  int id;
-  String name;
-  String company;
-  String branch;
-  String email;
-  String password;
-  String image;
-  String contact;
+  final Map data;
+  final int id;
+  final String name;
+  final String company;
+  final String branch;
+  final String email;
+  // String password;
+  final String image;
+  final String contact;
 
-  NewInspection({
+  const NewInspection({
     super.key,
     required this.data,
     required this.id,
@@ -37,7 +32,7 @@ class NewInspection extends StatefulWidget {
     required this.company,
     required this.branch,
     required this.email,
-    required this.password,
+    // required this.password,
     required this.image,
     required this.contact,
   });
@@ -816,7 +811,7 @@ class _NewInspectionState extends State<NewInspection> {
                   company: widget.company,
                   branch: widget.branch,
                   email: widget.email,
-                  password: widget.password,
+                  // password: widget.password,
                   image: widget.image,
                   contact: widget.contact,
                 ),
