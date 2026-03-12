@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:hash_mufattish/Providers/upcoming_inspection_provider.dart';
-import 'package:hash_mufattish/services/models/upcoming_inspection_model.dart';
+import 'package:hash_mufattish/models/upcoming_inspection_model.dart';
 import 'package:provider/provider.dart';
 import '../services/upcoming_inspection_service.dart';
 

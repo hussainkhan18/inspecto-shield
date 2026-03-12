@@ -1,12 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:hash_mufattish/LanguageTranslate/app_localizations.dart';
 import 'package:hash_mufattish/Screens/HomeScreen.dart';
-import 'package:hash_mufattish/services/secure_storage_service.dart';
 import 'package:loading_icon_button/loading_icon_button.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
-import 'package:hash_mufattish/services/notification_service.dart';
+import 'package:hash_mufattish/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,81 +12,38 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // Global key for form validation state
+  final _formKey = GlobalKey<FormState>();
+
+  // Controllers to manage text input and retrieval
   final TextEditingController email = TextEditingController();
   final TextEditingController password = TextEditingController();
 
-  // ── Save user session ──────────────────────────────────────────────────────
-  // FIXED: Raw password is NEVER saved. Token goes to SecureStorage.
-  // Non-sensitive display data (name, company, etc.) stays in SharedPreferences.
-  Future<void> _saveUserSession(Map jsonResponse) async {
-    // 1. Sensitive: token → encrypted secure storage
-    await SecureStorageService.saveToken(jsonResponse["access_token"]);
-    await SecureStorageService.setLoggedIn(true);
+  // State to toggle password visibility
+  bool _isPasswordVisible = false;
 
-    // 2. Non-sensitive display data → SharedPreferences
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setInt("id", jsonResponse["user"]["id"]);
-    await prefs.setString("name", jsonResponse["user"]["fullname"]);
-    await prefs.setString("email", jsonResponse["user"]["email"]);
-    await prefs.setString("image", jsonResponse["user"]["profile_img"]);
-    await prefs.setString("contact", jsonResponse["user"]["contact_number"]);
-    await prefs.setString("company", jsonResponse["user"]["company_name"]);
-    await prefs.setString("branch", jsonResponse["user"]["branch_name"]);
-
-    print("User session saved securely.");
-  }
-
-  // ── Login API call ─────────────────────────────────────────────────────────
+  /// Handles the authentication process via [AuthService]
   Future<void> login() async {
-    if (email.text.trim().isEmpty) {
-      _showSnack(AppLocalizations.of(context)!.translate("Email required"));
-      return;
-    }
-    if (password.text.trim().isEmpty) {
-      _showSnack(AppLocalizations.of(context)!.translate("Password required"));
-      return;
-    }
-
     try {
-      final String? fcmToken = await NotificationService().getToken();
-
-      final response = await http.post(
-        Uri.parse('https://inspectoshield.com/api/login'),
-        body: {
-          "email": email.text.trim(),
-          "password": password.text,
-          if (fcmToken != null) "fcm_token": fcmToken,
-        },
+      final jsonResponse = await AuthService.login(
+        email.text.trim(),
+        password.text,
       );
 
-      if (response.body.isEmpty) {
-        _showSnack("Server returned an empty response");
-        return;
-      }
-
-      Map jsonResponse;
-      try {
-        jsonResponse = jsonDecode(response.body);
-      } catch (e) {
-        _showSnack("Invalid response from server");
-        return;
-      }
-
-      if (response.statusCode != 200) {
-        _showSnack("Server error: ${response.statusCode}");
-        return;
-      }
-
+      // Check if the API returned a successful status
       if (jsonResponse["success"] == true) {
-        await _saveUserSession(jsonResponse);
+        // Persist user data and session locally
+        await AuthService.saveSession(jsonResponse);
 
+        // Prevent navigation if the widget was removed from the tree during the async gap
         if (!mounted) return;
 
         _showSnack(
-          "${AppLocalizations.of(context)!.translate("Welcome")} "
-          "${jsonResponse["user"]["fullname"]}",
+          "${AppLocalizations.of(context)!.translate("Welcome")} ${jsonResponse["user"]["fullname"]}",
+          isError: false,
         );
 
+        // Navigate to Home and remove the login screen from the stack
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -108,12 +61,14 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         _handleApiError(jsonResponse["message"]);
       }
-    } catch (e) {
-      print("Login error: $e");
-      _showSnack("Connection error. Please try again.");
+    } on Exception {
+      // General exception handler for network issues or timeouts
+      _showSnack("No internet connection. Please try again.");
     }
   }
 
+  /// Parses error messages from the API response
+  /// Supports both simple strings and Map-based validation errors (e.g., Laravel style)
   void _handleApiError(dynamic message) {
     if (message is String) {
       _showSnack(message);
@@ -122,88 +77,234 @@ class _LoginScreenState extends State<LoginScreen> {
         _showSnack(message["email"][0]);
       } else if (message["password"] != null) {
         _showSnack(message["password"][0]);
+      } else {
+        _showSnack("Invalid credentials. Please try again.");
       }
+    } else {
+      _showSnack("Something went wrong. Please try again.");
     }
   }
 
-  void _showSnack(String message) {
+  /// Displays a consistent SnackBar for feedback across the screen
+  void _showSnack(String message, {bool isError = true}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  // ── UI ─────────────────────────────────────────────────────────────────────
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset("assets/HASH MUFATTISH.png", scale: 4),
-          Text(
-            AppLocalizations.of(context)!.translate('Sign In'),
-            style: const TextStyle(fontSize: 25),
-          ),
-          const SizedBox(height: 20),
-          _inputBox(
-            controller: email,
-            hint: AppLocalizations.of(context)!.translate('Email'),
-          ),
-          _inputBox(
-            controller: password,
-            isPassword: true,
-            hint: AppLocalizations.of(context)!.translate('Password'),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ArgonButton(
-              width: MediaQuery.of(context).size.width,
-              height: 50,
-              borderRadius: 10.0,
-              elevation: 10,
-              color: Colors.black,
-              borderSide: const BorderSide(color: Colors.blue),
-              child: Text(
-                AppLocalizations.of(context)!.translate('SIGN IN'),
-                style: const TextStyle(color: Colors.white, fontSize: 15),
-              ),
-              onTap: (startLoading, stopLoading, btnState) async {
-                startLoading();
-                await login();
-                stopLoading();
-              },
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isError ? Colors.redAccent : const Color(0xff0DC5B9),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline : Icons.check_circle_outline,
+              color: Colors.white,
+              size: 18,
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _inputBox({
-    required TextEditingController controller,
-    bool isPassword = false,
-    required String hint,
-  }) =>
-      Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.blue),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: TextField(
-            controller: controller,
-            obscureText: isPassword,
-            decoration:
-                InputDecoration(border: InputBorder.none, hintText: hint),
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA), // Soft background color
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: Column(
+              children: [
+                // Application Branding
+                Image.asset(
+                  "assets/HASH MUFATTISH.png",
+                  height: size.height * 0.12,
+                ),
+                const SizedBox(height: 30),
+
+                // Main Authentication Card
+                Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  color: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0, vertical: 32.0),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            AppLocalizations.of(context)!.translate('Sign In'),
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1A1A1A),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            "Enter your credentials to continue",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: Colors.grey[500], fontSize: 14),
+                          ),
+                          const SizedBox(height: 30),
+
+                          // Email Field
+                          _buildTextField(
+                            controller: email,
+                            hint: AppLocalizations.of(context)!
+                                .translate('Email'),
+                            icon: Icons.email_outlined,
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return "Email required";
+                              }
+                              // Basic regex for email validation
+                              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                  .hasMatch(value)) {
+                                return "Invalid format";
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Password Field
+                          _buildTextField(
+                            controller: password,
+                            hint: AppLocalizations.of(context)!
+                                .translate('Password'),
+                            icon: Icons.lock_outline_rounded,
+                            isPassword: true,
+                            obscureText: !_isPasswordVisible,
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _isPasswordVisible
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                                color: const Color(0xff0DC5B9),
+                              ),
+                              onPressed: () => setState(() =>
+                                  _isPasswordVisible = !_isPasswordVisible),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return "Password required";
+                              }
+                              if (value.length < 6) return "Min. 6 characters";
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 30),
+
+                          // Dynamic Loading Button
+                          ArgonButton(
+                            width: size.width,
+                            height: 55,
+                            borderRadius: 12.0,
+                            color: const Color(0xFF000000),
+                            child: Text(
+                              AppLocalizations.of(context)!
+                                  .translate('SIGN IN'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            onTap: (startLoading, stopLoading, btnState) async {
+                              if (_formKey.currentState!.validate()) {
+                                startLoading();
+                                try {
+                                  await login();
+                                } finally {
+                                  // Ensure loading stops even if the login logic fails
+                                  stopLoading();
+                                }
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  "© 2026 Inspecto Shield Platform",
+                  style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                ),
+              ],
+            ),
           ),
         ),
-      );
+      ),
+    );
+  }
+
+  /// Reusable helper widget to build stylized TextFormFields
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool isPassword = false,
+    bool obscureText = false,
+    Widget? suffixIcon,
+    TextInputType? keyboardType,
+    required String? Function(String?) validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      validator: validator,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+        prefixIcon: Icon(icon, color: const Color(0xff0DC5B9), size: 20),
+        suffixIcon: suffixIcon,
+        filled: true,
+        fillColor: const Color(0xFFF9FAFB),
+        contentPadding: const EdgeInsets.symmetric(vertical: 18),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[200]!),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[200]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xff0DC5B9), width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+        ),
+      ),
+    );
+  }
 
   @override
   void dispose() {
+    // Clean up controllers when the widget is removed from the tree
     email.dispose();
     password.dispose();
     super.dispose();

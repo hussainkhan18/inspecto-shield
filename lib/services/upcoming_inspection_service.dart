@@ -1,16 +1,16 @@
 import 'dart:convert';
-import 'package:hash_mufattish/services/models/upcoming_inspection_model.dart';
+import 'package:hash_mufattish/constants/api_constants.dart';
+import 'package:hash_mufattish/models/upcoming_inspection_model.dart';
 import 'package:http/http.dart' as http;
 
 class UpcomingInspectionService {
-  static const String _baseUrl = 'https://inspectoshield.com/api/inspector';
   static const Duration _timeout = Duration(seconds: 15);
 
   /// Fetches weekly pending inspections for a given inspector [userId].
   /// Returns [UpcomingInspectionResponse] on success.
   /// Throws [UpcomingInspectionException] on any failure.
   Future<UpcomingInspectionResponse> fetchWeeklyPending(int userId) async {
-    final uri = Uri.parse('$_baseUrl/weekly-pending/$userId');
+    final uri = Uri.parse('${ApiConstants.upcomingInspection}/$userId');
 
     try {
       final response = await http.get(uri).timeout(_timeout);

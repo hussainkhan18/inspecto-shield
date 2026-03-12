@@ -1,10 +1,8 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:hash_mufattish/LanguageTranslate/app_localizations.dart';
 import 'package:hash_mufattish/Screens/view_certificate.dart';
+import 'package:hash_mufattish/services/equipment_service.dart';
 import 'package:loading_icon_button/loading_icon_button.dart';
-import 'package:http/http.dart' as http;
 
 class EquipementInfo extends StatefulWidget {
   final Map data;
@@ -24,14 +22,7 @@ class _EquipementInfoState extends State<EquipementInfo> {
   static const Color _teal = Color(0xff0DC5B9);
 
   Future<Map<String, dynamic>?> fetchEquipmentData(String reportId) async {
-    final response = await http.get(
-      Uri.parse('https://inspectoshield.com/api/generate/$reportId'),
-    );
-    if (response.statusCode == 200) {
-      return json.decode(response.body)["data"];
-    } else {
-      throw Exception('Failed to load equipment data');
-    }
+    return await EquipmentService.fetchEquipmentData(reportId);
   }
 
   Future<void> _fetchEquipmentData() async {
@@ -52,15 +43,12 @@ class _EquipementInfoState extends State<EquipementInfo> {
 
   Future<void> getCertificateData() async {
     try {
-      final response = await http.get(
-        Uri.parse(
-            'https://inspectoshield.com/api/certificate/${widget.data["report_id"].toString()}'),
+      final imageUrl = await EquipmentService.getCertificateData(
+        widget.data["report_id"].toString(),
       );
-      if (response.statusCode == 200) {
-        Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-        String certificateImage = jsonResponse["data"]["certificate_img"];
+      if (imageUrl != null) {
         setState(() {
-          certificateImgUrl = certificateImage;
+          certificateImgUrl = imageUrl;
         });
       }
     } catch (e) {

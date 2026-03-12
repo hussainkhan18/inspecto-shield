@@ -26,39 +26,6 @@ class NetworkService {
     );
   }
 
-  // void showDialogBox(BuildContext context) {
-  //   showDialog(
-  //     context: context,
-  //     barrierDismissible: false, // Prevents dismissal by tapping outside
-  //     builder: (BuildContext context) => WillPopScope(
-  //       onWillPop: () async => false, // Prevents dismissal by back button
-  //       child: CupertinoAlertDialog(
-  //         title: Text(
-  //          ('No Connection'),
-  //         ),
-  //         content: Text(
-  //           ('Please check your internet connectivity'),
-  //         ),
-  //         actions: <Widget>[
-  //           TextButton(
-  //             onPressed: () async {
-  //               isAlertSet = false;
-  //               Navigator.pop(context);
-  //               isDeviceConnected =
-  //                   await InternetConnectionChecker().hasConnection;
-  //               if (!isDeviceConnected && !isAlertSet) {
-  //                 showDialogBox(context);
-  //                 isAlertSet = true;
-  //               }
-  //             },
-  //             child: const Text('OK'),
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
-
   void showDialogBox(BuildContext context) {
     Alert(
       context: context,

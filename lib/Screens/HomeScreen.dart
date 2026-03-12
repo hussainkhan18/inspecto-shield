@@ -10,15 +10,14 @@ import 'package:hash_mufattish/Screens/login.dart';
 import 'package:hash_mufattish/Screens/my_record.dart';
 import 'package:hash_mufattish/Screens/new_inspection.dart';
 import 'package:hash_mufattish/Screens/upcoming_inspection_screen.dart';
+import 'package:hash_mufattish/services/auth_service.dart';
+import 'package:hash_mufattish/services/home_service.dart';
 import 'package:hash_mufattish/services/notification_service.dart';
 import 'package:loading_icon_button/loading_icon_button.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
-import 'package:hash_mufattish/services/secure_storage_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final int id;
@@ -94,24 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<Map<String, dynamic>?> _fetchPendingInspections() async {
     try {
-      final response = await http
-          .get(
-            Uri.parse(
-              'https://inspectoshield.com/api/inspector/pending-inspections/${widget.id}',
-            ),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      print('Pending Inspections Response: ${response.statusCode}');
-      print('Response Body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        if (jsonData['success'] == true && jsonData['data'] != null) {
-          return jsonData;
-        }
-      }
-      return null;
+      return await HomeService.getPendingInspections(widget.id);
     } catch (e) {
       print('Error fetching pending inspections: $e');
       return null;
@@ -428,6 +410,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 400,
                         width: 300,
                         child: MobileScanner(
+                          controller:
+                              controller, // Pass the controller to the MobileScanner
                           onDetect: (BarcodeCapture barcodeCapture) {
                             if (isNavigated) return;
                             isNavigated = true;
@@ -533,6 +517,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 400,
                         width: 300,
                         child: MobileScanner(
+                          controller:
+                              controller, // Pass the controller to the MobileScanner
                           onDetect: (BarcodeCapture barcodeCapture) {
                             final String? code =
                                 barcodeCapture.barcodes.first.rawValue;
@@ -710,21 +696,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   onTap: (startLoading, stopLoading, btnState) async {
                     startLoading();
-
-                    try {
-                      await NotificationService().deleteToken();
-                      print("FCM Token Deleted");
-                    } catch (e) {
-                      print("Error deleting token: $e");
-                    }
-
-                    SharedPreferences prefs =
-                        await SharedPreferences.getInstance();
-                    await prefs.clear();
-                    await SecureStorageService.clearAll();
-
+                    await AuthService.logout();
                     stopLoading();
-
                     if (context.mounted) {
                       Navigator.pushAndRemoveUntil(
                         context,
@@ -745,6 +718,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _subscription?.cancel();
+    controller.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }

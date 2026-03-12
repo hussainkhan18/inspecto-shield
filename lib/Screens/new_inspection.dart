@@ -1,15 +1,14 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hash_mufattish/LanguageTranslate/app_localizations.dart';
 import 'package:hash_mufattish/Providers/checklist_Provider.dart';
 import 'package:hash_mufattish/Screens/HomeScreen.dart';
+import 'package:hash_mufattish/services/equipment_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:loading_icon_button/loading_icon_button.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 
@@ -108,94 +107,6 @@ class _NewInspectionState extends State<NewInspection> {
     }
   }
 
-  // Future<File> compressImage(File file) async {
-  //   final image = img.decodeImage(file.readAsBytesSync());
-  //   final compressedImage = img.encodeJpg(
-  //     image!,
-  //   );
-
-  //   final tempDir = await getTemporaryDirectory();
-  //   final compressedFile =
-  //       File('${tempDir.path}/compressed_${file.path.split('/').last}');
-  //   compressedFile.writeAsBytesSync(compressedImage);
-
-  //   return compressedFile;
-  // }
-
-  // void showPickerDialog() {
-  //   showDialog(
-  //     context: context,
-  //     barrierDismissible: false,
-  //     builder: (BuildContext context) {
-  //       return AlertDialog(
-  //         title: Text(
-  //           AppLocalizations.of(context)!
-  //               .translate("Select Image Source"), // Translate this text
-  //         ),
-  //         actions: <Widget>[
-  //           Center(
-  //             child: Row(
-  //               crossAxisAlignment: CrossAxisAlignment.center,
-  //               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //               children: [
-  //                 ElevatedButton(
-  //                   onPressed: () {
-  //                     Navigator.of(context).pop();
-  //                     pickImage(ImageSource.camera);
-  //                   },
-  //                   style: ElevatedButton.styleFrom(
-  //                     backgroundColor: const Color(0xff0DC5B9),
-  //                     elevation: 10,
-  //                     shape: RoundedRectangleBorder(
-  //                       borderRadius: BorderRadius.circular(8.0),
-  //                     ),
-  //                   ),
-  //                   child: Container(
-  //                     // width: MediaQuery.of(context).size.width * .2,
-  //                     height: MediaQuery.of(context).size.height * .05,
-  //                     child: Center(
-  //                       child: Text(
-  //                         AppLocalizations.of(context)!.translate("Camera"),
-  //                         style: TextStyle(color: Colors.white),
-  //                       ),
-  //                     ),
-  //                   ),
-  //                 ),
-  //                 // SizedBox(
-  //                 //     width: MediaQuery.of(context).size.width *
-  //                 //         .01), // Adjust the spacing between buttons
-  //                 ElevatedButton(
-  //                   onPressed: () {
-  //                     Navigator.of(context).pop();
-  //                     pickImage(ImageSource.gallery);
-  //                   },
-  //                   style: ElevatedButton.styleFrom(
-  //                     backgroundColor: const Color(0xff0DC5B9),
-  //                     elevation: 10,
-  //                     shape: RoundedRectangleBorder(
-  //                       borderRadius: BorderRadius.circular(8.0),
-  //                     ),
-  //                   ),
-  //                   child: Container(
-  //                     // width: MediaQuery.of(context).size.width * .3,
-  //                     height: MediaQuery.of(context).size.height * .05,
-  //                     child: Center(
-  //                       child: Text(
-  //                         AppLocalizations.of(context)!.translate("Gallery"),
-  //                         style: TextStyle(color: Colors.white),
-  //                       ),
-  //                     ),
-  //                   ),
-  //                 ),
-  //               ],
-  //             ),
-  //           ),
-  //         ],
-  //       );
-  //     },
-  //   );
-  // }
-
   void showPickerDialog() {
     Alert(
       context: context,
@@ -253,7 +164,7 @@ class _NewInspectionState extends State<NewInspection> {
         DialogButton(
           onPressed: () => Navigator.pop(context),
           color: Colors.red,
-          child: Text(
+          child: const Text(
             "Cancel",
             style: TextStyle(color: Colors.white, fontSize: 18),
           ),
@@ -261,141 +172,6 @@ class _NewInspectionState extends State<NewInspection> {
       ],
     ).show();
   }
-
-  // void _showImageDialog() {
-  //   showDialog(
-  //     context: context,
-  //     barrierDismissible: false,
-  //     builder: (BuildContext context) {
-  //       return StatefulBuilder(
-  //         builder: (context, setState) {
-  //           return AlertDialog(
-  //             content: Column(
-  //               mainAxisSize: MainAxisSize.min,
-  //               children: <Widget>[
-  //                 ArgonButton(
-  //                   width: MediaQuery.of(context).size.width,
-  //                   height: 50,
-  //                   borderRadius: 8.0,
-  //                   elevation: 10,
-  //                   color: const Color(0xff0DC5B9),
-  //                   child: Text(
-  //                     AppLocalizations.of(context)!.translate("Add Picture"),
-  //                     style: TextStyle(color: Colors.white),
-  //                   ),
-  //                   onTap: (startLoading, stopLoading, btnState) async {
-  //                     pickCertificate();
-  //                   },
-  //                 ),
-  //                 Padding(
-  //                   padding: const EdgeInsets.all(8.0),
-  //                   child: Visibility(
-  //                     visible: isShow,
-  //                     child: Container(
-  //                       height: 60,
-  //                       child: _certificate != null
-  //                           ? Image.file(_certificate!)
-  //                           : Text(AppLocalizations.of(context)!
-  //                               .translate('No image selected.')),
-  //                     ),
-  //                   ),
-  //                 ),
-  //                 Padding(
-  //                   padding: const EdgeInsets.all(8.0),
-  //                   child: Row(
-  //                     mainAxisAlignment: MainAxisAlignment.spaceAround,
-  //                     children: [
-  //                       Text(AppLocalizations.of(context)!
-  //                           .translate("Issue Date: ")),
-  //                       Container(
-  //                         height: 40,
-  //                         width: 100,
-  //                         color: Colors.white,
-  //                         child: TextField(
-  //                           textAlign: TextAlign.center,
-  //                           controller: issueDate,
-  //                           readOnly: true,
-  //                           decoration: InputDecoration(
-  //                               hintText: AppLocalizations.of(context)!
-  //                                   .translate("Select a date"),
-  //                               border: InputBorder.none,
-  //                               focusedBorder: InputBorder.none),
-  //                           onTap: () {
-  //                             _selectIssueDate(context);
-  //                           },
-  //                         ),
-  //                       ),
-  //                     ],
-  //                   ),
-  //                 ),
-  //                 Padding(
-  //                   padding: const EdgeInsets.all(8.0),
-  //                   child: Row(
-  //                     mainAxisAlignment: MainAxisAlignment.spaceAround,
-  //                     children: [
-  //                       Text(AppLocalizations.of(context)!
-  //                           .translate("Expiry Date: ")),
-  //                       Container(
-  //                         height: 40,
-  //                         width: 100,
-  //                         color: Colors.white,
-  //                         child: TextField(
-  //                           textAlign: TextAlign.center,
-  //                           controller: expiryDate,
-  //                           readOnly: true,
-  //                           decoration: InputDecoration(
-  //                               hintText: AppLocalizations.of(context)!
-  //                                   .translate("Select a date"),
-  //                               border: InputBorder.none,
-  //                               focusedBorder: InputBorder.none),
-  //                           onTap: () {
-  //                             _selectExpiryDate(context);
-  //                           },
-  //                         ),
-  //                       ),
-  //                     ],
-  //                   ),
-  //                 )
-  //               ],
-  //             ),
-  //             actions: <Widget>[
-  //               ArgonButton(
-  //                 width: MediaQuery.of(context).size.width,
-  //                 height: 50,
-  //                 borderRadius: 8.0,
-  //                 elevation: 10,
-  //                 color: Colors.black,
-  //                 child: Text(
-  //                   AppLocalizations.of(context)!.translate("Submit"),
-  //                   style: TextStyle(color: Colors.white),
-  //                 ),
-  //                 onTap: (startLoading, stopLoading, btnState) async {
-  //                   if (_certificate == null ||
-  //                       issueDate.text.isEmpty ||
-  //                       expiryDate.text.isEmpty) {
-  //                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-  //                       content: Text("Please fill all the required fields."),
-  //                     ));
-  //                     return Navigator.pop(context);
-  //                   }
-  //                   stopLoading;
-  //                   await postCertificateDataToAPI(
-  //                       "${widget.data["equipment_id"]}",
-  //                       _certificate,
-  //                       "${issueDate.text}",
-  //                       "${expiryDate.text}");
-  //                   btnState;
-
-  //                   Navigator.pop(context);
-  //                 },
-  //               ),
-  //             ],
-  //           );
-  //         },
-  //       );
-  //     },
-  //   );
-  // }
 
   void _showImageDialog() {
     Alert(
@@ -441,12 +217,6 @@ class _NewInspectionState extends State<NewInspection> {
               );
               return;
             }
-            // await postCertificateDataToAPI(
-            //   "\${widget.data[\"equipment_id\"]}",
-            //   _certificate,
-            //   "\${issueDate.text}",
-            //   "\${expiryDate.text}",
-            // );
             await postCertificateDataToAPI(
               widget.data["equipment_id"].toString(),
               _certificate,
@@ -456,7 +226,7 @@ class _NewInspectionState extends State<NewInspection> {
             Navigator.pop(context);
           },
           color: Colors.black,
-          child: Text(
+          child: const Text(
             "Submit",
             style: TextStyle(color: Colors.white, fontSize: 18),
           ),
@@ -491,80 +261,39 @@ class _NewInspectionState extends State<NewInspection> {
     );
   }
 
+// ── FETCH EQUIPMENT DATA ─────────────────────────────────
   Future<void> postCertificateDataToAPI(String equipmentId,
       File? certificateImg, String issuanceDate, String expiryDate) async {
-    // Ensure that certificateImg is not null before proceeding
     if (certificateImg == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(AppLocalizations.of(context)!
               .translate("Certificate detail could not be added"))));
       return;
     }
-
-    // API endpoint
-    String url =
-        'https://inspectoshield.com/api/equipment_certificate/${widget.data["report_id"].toString()}';
-
     try {
-      // Creating a multipart request
-      var request = http.MultipartRequest('POST', Uri.parse(url));
-
-      // Adding image file to the request
-      request.files.add(await http.MultipartFile.fromPath(
-        'certificate_img',
-        certificateImg.path,
-      ));
-
-      // Adding other form fields
-      request.fields['issuance_date'] = issuanceDate;
-      request.fields['expiry_date'] = expiryDate;
-
-      // Sending the request
-      var streamedResponse = await request.send();
-
-      // Getting response
-      var response = await http.Response.fromStream(streamedResponse);
-
-      // Checking response status code
-      if (response.statusCode == 200) {
+      final success = await EquipmentService.postCertificate(
+        reportId: widget.data["report_id"].toString(),
+        certificateImg: certificateImg,
+        issuanceDate: issuanceDate,
+        expiryDate: expiryDate,
+      );
+      if (!mounted) return;
+      if (success) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(AppLocalizations.of(context)!
                 .translate("Certificate details added successfully"))));
-        // Request successful
-        print('Data posted successfully! saad');
-        // print(response.body);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(AppLocalizations.of(context)!
                 .translate("Certificate detail could not be added"))));
-        // Request failed
-        print('Failed to post data.saad');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
       }
     } catch (e) {
-      // Error handling
       print('Error posting data: $e');
     }
   }
 
   Future<Map<String, dynamic>?> fetchEquipmentData(String reportId) async {
-    final response = await http.get(
-      Uri.parse(
-        // 'https://inspectoshield.com/api/generate/${widget.data["report_id"].toString()}',
-        'https://inspectoshield.com/api/generate/${widget.data["report_id"].toString()}',
-      ),
-    );
-
-    if (response.statusCode == 200) {
-      print("api data hello saad ${json.decode(response.body)["data"]}");
-      print("locationId ${widget.data["report_id"]}");
-
-      print("qr code  data saad ${widget.data}");
-      return json.decode(response.body)["data"];
-    } else {
-      throw Exception('Failed to load equipment data');
-    }
+    return await EquipmentService.fetchEquipmentData(reportId);
   }
 
   Map<String, dynamic>? _equipmentData;
@@ -602,182 +331,56 @@ class _NewInspectionState extends State<NewInspection> {
 
   Future<void> saveCheckList() async {
     try {
-      // Fetch equipment data using the record_id from the QR code
       var equipmentData =
-          await fetchEquipmentData(widget.data["record_id"].toString());
-
+          await fetchEquipmentData(widget.data["report_id"].toString());
+      if (!mounted) return;
       if (equipmentData == null) {
         print("Equipment data is null");
-        return; // Exit the function if equipment data is null
+        return;
       }
-
-      // Get the necessary fields from equipmentData
-      var equipmentId = equipmentData["equipment_id"];
-      var equipmentName = equipmentData["equipment_name"];
-      var locationDescription = equipmentData["location_description"];
-      var locationName = equipmentData["location"];
-      var checklistId = equipmentData["checklist_id"];
-      var locationId = equipmentData["location_id"];
-      var area = equipmentData["area"];
-
-      print("locationId asdasd $locationName");
-
+      if (!mounted) return;
       if (_image == null) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Upload equipment Image First")));
-        return; // Exit the function if image is null
+        return;
       }
-
-      // Prepare the multipart request
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('https://inspectoshield.com/api/equipment_inspection'),
-      );
-
-      // Add the image to the request
-      var imageFile =
-          await http.MultipartFile.fromPath('current_img', _image!.path);
-      request.files.add(imageFile);
-
-      // Add the certificate image if it exists
-      if (_certificate != null && _certificate!.path.isNotEmpty) {
-        var certificateFile = await http.MultipartFile.fromPath(
-            'certificate_img', _certificate!.path);
-        request.files.add(certificateFile);
-      }
-
-      // Add fields from the fetched equipment data and other relevant data
-      request.fields['equipment_id'] = equipmentId.toString();
-      request.fields['report_id'] = widget.data["report_id"]
-          .toString(); // Using the record ID from the QR code
-      request.fields['checklist_id'] = checklistId;
-      request.fields['issuance_date'] = issueDate.text;
-      request.fields['expiry_date'] = expiryDate.text;
-      request.fields['inspector_name'] = widget.name;
-      request.fields['area'] = area;
-
-      request.fields['location_id'] = locationId;
-      request.fields['location_description'] = locationDescription ??
-          AppLocalizations.of(context)!.translate("No data");
-      request.fields['location_name'] =
-          locationName ?? AppLocalizations.of(context)!.translate("No data");
-      request.fields['created_by'] = widget.id.toString();
-      request.fields['equipment_name'] =
-          equipmentName ?? AppLocalizations.of(context)!.translate("No data");
-
-      // Validation for tags
+      if (!mounted) return;
       var checklistProvider =
           Provider.of<ChecklistProvider>(context, listen: false);
       if (!checklistProvider.areAllTagsSelected()) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(AppLocalizations.of(context)!
                 .translate("Please select all tags"))));
-        return; // Exit the function if all tags are not selected
+        return;
       }
 
-      // Add selected tags to the request
-      int index = 1;
-      checklistProvider.items.forEach((key, value) {
-        request.fields['tag$index'] = value;
-        index++;
-      });
+      final result = await EquipmentService.saveCheckList(
+        equipmentData: equipmentData,
+        imageFile: _image!,
+        certificateFile: _certificate,
+        reportId: widget.data["report_id"].toString(),
+        inspectorId: widget.id,
+        inspectorName: widget.name,
+        issuanceDate: issueDate.text,
+        expiryDate: expiryDate.text,
+        checklistItems: Map<String, String>.from(checklistProvider.items),
+      );
 
-      // Send the request and handle the response
-      var response = await request.send();
-      var responseString = await response.stream.bytesToString();
-      var jsonResponse = jsonDecode(responseString);
-
-      if (response.statusCode == 200) {
+      if (!mounted) return;
+      if (result['statusCode'] == 200) {
         showSuccessAnimation(context);
-      } else if (jsonResponse["success"] == false) {
+      } else if (result['body']["success"] == false) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(jsonResponse.toString())));
+            .showSnackBar(SnackBar(content: Text(result['body'].toString())));
       }
-
       print("Time Right Now: ${DateTime.now()}");
     } catch (error) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text("Something went wrong please refresh app")));
       print('Error saving checklist: $error');
     }
   }
-
-  // void showSuccessAnimation(BuildContext context) {
-  //   try {
-  //     showDialog(
-  //       context: context,
-  //       builder: (BuildContext context) {
-  //         return Dialog(
-  //           shape: RoundedRectangleBorder(
-  //             borderRadius: BorderRadius.circular(20.0),
-  //           ),
-  //           child: Padding(
-  //             padding: const EdgeInsets.all(10.0),
-  //             child: Column(
-  //               mainAxisAlignment: MainAxisAlignment.center,
-  //               crossAxisAlignment: CrossAxisAlignment.center,
-  //               mainAxisSize: MainAxisSize.min,
-  //               children: [
-  //                 Lottie.asset(
-  //                   'assets/animations/success.json',
-  //                   width: MediaQuery.of(context).size.width * .7,
-  //                   height: MediaQuery.of(context).size.height * .3,
-  //                   // fit: BoxFit.cover,
-  //                   onLoaded: (composition) {
-  //                     print("Lottie animation loaded successfully.");
-  //                   },
-  //                 ),
-  //                 SizedBox(height: 10),
-  //                 Text(
-  //                   AppLocalizations.of(context)!
-  //                       .translate("New inspection made"),
-  //                   style: TextStyle(
-  //                     fontSize: 18,
-  //                     fontWeight: FontWeight.bold,
-  //                   ),
-  //                 ),
-  //                 SizedBox(height: 20),
-  //                 Padding(
-  //                   padding: const EdgeInsets.all(5.0),
-  //                   child: ArgonButton(
-  //                     width: MediaQuery.of(context).size.width,
-  //                     height: 50,
-  //                     borderRadius: 8.0,
-  //                     elevation: 10,
-  //                     color: Colors.black,
-  //                     child: Text(
-  //                       AppLocalizations.of(context)!.translate("CLOSE"),
-  //                       style: TextStyle(color: Colors.white),
-  //                     ),
-  //                     onTap: (startLoading, stopLoading, btnState) async {
-  //                       Navigator.of(context).pushAndRemoveUntil(
-  //                         MaterialPageRoute(
-  //                           builder: (context) => HomeScreen(
-  //                             id: widget.id,
-  //                             name: widget.name,
-  //                             company: widget.company,
-  //                             branch: widget.branch,
-  //                             email: widget.email,
-  //                             password: widget.password,
-  //                             image: widget.image,
-  //                             contact: widget.contact,
-  //                           ),
-  //                         ),
-  //                         (Route<dynamic> route) => false,
-  //                       );
-  //                     },
-  //                   ),
-  //                 ),
-  //               ],
-  //             ),
-  //           ),
-  //         );
-  //       },
-  //     );
-  //   } catch (error) {
-  //     print("Error showing success animation: $error");
-  //   }
-  // }
 
   void showSuccessAnimation(BuildContext context) {
     Alert(
@@ -820,7 +423,7 @@ class _NewInspectionState extends State<NewInspection> {
             );
           },
           color: Colors.black,
-          child: Text(
+          child: const Text(
             "CLOSE",
             style: TextStyle(color: Colors.white),
           ),
@@ -931,16 +534,6 @@ class _NewInspectionState extends State<NewInspection> {
                       label: "EQUIPMENT NAME: ",
                       value: _equipmentData?["equipment_name"] ?? "No data",
                     ),
-
-                    // Divider(),
-                    // // Location Description
-                    // _buildDataRow(
-                    //   context,
-                    //   label: "LOCATION DESCRIPTION: ",
-                    //   value:
-                    // _equipmentData?["location_description"] ?? "No data",
-                    // ),
-
                     const Divider(),
                     // Location Description
                     _buildDataRow(
@@ -1034,6 +627,7 @@ class _NewInspectionState extends State<NewInspection> {
                       ),
                       onTap: (startLoading, stopLoading, btnState) {
                         print(_image);
+
                         showPickerDialog();
                       },
                     ),
@@ -1066,19 +660,16 @@ class _NewInspectionState extends State<NewInspection> {
                         ),
                       ),
                       onTap: (startLoading, stopLoading, btnState) async {
-                        print(_image);
-                        var equipmentData = await fetchEquipmentData(
-                            widget.data["report_id"].toString());
-                        var equipmentName = equipmentData!["equipment_name"];
-                        print("equip name $equipmentName");
-
                         startLoading();
-                        await saveCheckList();
-                        stopLoading();
+                        try {
+                          await saveCheckList();
+                        } finally {
+                          stopLoading();
+                        }
                       },
                       child: Text(
                         AppLocalizations.of(context)!.translate("SAVE"),
-                        style: TextStyle(color: Colors.white),
+                        style: const TextStyle(color: Colors.white),
                       ),
                     ),
                     const SizedBox(

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hash_mufattish/LanguageTranslate/app_localizations.dart';
@@ -8,7 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:loading_icon_button/loading_icon_button.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
-import 'package:hash_mufattish/services/notification_service.dart';
+import 'package:hash_mufattish/services/auth_service.dart';
 
 class Profile extends StatefulWidget {
   int id;
@@ -99,19 +98,18 @@ class _ProfileState extends State<Profile> {
     }
   }
 
+  // REMOVE poora login() method aur REPLACE:
   Future<void> login() async {
     try {
-      String? fcmToken = await NotificationService().getToken();
-      final response = await http
-          .post(Uri.parse('https://inspectoshield.com/api/login'), body: {
-        "email": email.text,
-        "password": password.text,
-        if (fcmToken != null) "fcm_token": fcmToken,
-      });
+      final jsonResponse = await AuthService.login(
+        email.text,
+        password.text,
+      );
+      if (!mounted) return;
 
-      Map<dynamic, dynamic> jsonResponse = jsonDecode(response.body);
-      print(jsonResponse);
       if (jsonResponse["success"] == true) {
+        await AuthService.saveSession(jsonResponse);
+        if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (context) => HomeScreen(
@@ -120,95 +118,105 @@ class _ProfileState extends State<Profile> {
               company: jsonResponse["user"]["company_name"],
               branch: jsonResponse["user"]["branch_name"],
               email: jsonResponse["user"]["email"],
-              // password: password.text,
               image: jsonResponse["user"]["profile_img"],
               contact: jsonResponse["user"]["contact_number"],
             ),
           ),
           (Route<dynamic> route) => false,
         );
-      } else if (jsonResponse["success"] == false) {
-        if (jsonResponse["message"] is String) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(jsonResponse["message"])));
-        } else if (jsonResponse["message"]["email"] != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(jsonResponse["message"]["email"][0])));
-        } else if (jsonResponse["message"]["password"] != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(jsonResponse["message"]["password"][0])));
-        }
+      } else {
+        _showSnack(jsonResponse["message"] is String
+            ? jsonResponse["message"]
+            : "Login failed. Please try again.");
       }
     } catch (e) {
-      print(e);
+      _showSnack("Connection error. Please try again.");
     }
   }
 
+  // REMOVE poora profileUpdate() aur REPLACE:
   Future<void> profileUpdate() async {
-    try {
-      if (name.text == "") {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(AppLocalizations.of(context)!
-                .translate("Name Field is required"))));
-      } else if (contact.text == "") {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(AppLocalizations.of(context)!
-                .translate("Contact Field is required"))));
-      } else if (email.text == "") {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(AppLocalizations.of(context)!
-                .translate("Email Field is required"))));
-      } else if (password.text == "") {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(AppLocalizations.of(context)!
-                .translate("Password Field is required"))));
-      } else {
-        var request = http.MultipartRequest(
-          'POST',
-          Uri.parse('https://inspectoshield.com/api/profile_update'),
-        );
-        var image = await http.MultipartFile.fromPath(
-            'profile_img',
-            imageChanged != true
-                ? Provider.of<EditProfileProvider>(context, listen: false).path
-                : widget.image);
-        request.files.add(image);
-        request.fields['id'] = widget.id.toString();
-        request.fields['fullname'] = name.text;
-        request.fields['email'] = email.text;
-        request.fields['contact_number'] = contact.text;
-        request.fields['password'] = password.text;
-        request.fields['confirm_password'] = password.text;
+    if (name.text.isEmpty) {
+      _showSnack(
+          AppLocalizations.of(context)!.translate("Name Field is required"));
+      return;
+    }
+    if (contact.text.isEmpty) {
+      _showSnack(
+          AppLocalizations.of(context)!.translate("Contact Field is required"));
+      return;
+    }
+    if (password.text.isEmpty) {
+      _showSnack(AppLocalizations.of(context)!
+          .translate("Password Field is required"));
+      return;
+    }
 
-        var response = await request.send();
-        var responseString = await response.stream.bytesToString();
-        var jsonResponse = jsonDecode(responseString);
-        if (response.statusCode == 200) {
-          isLoading = false;
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(AppLocalizations.of(context)!
-                  .translate("Profile Updated Successfully"))));
-          login();
-        } else if (jsonResponse["success"] == false) {
-          print(jsonResponse);
-          if (jsonResponse["message"] is String) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(AppLocalizations.of(context)!
-                    .translate(jsonResponse["message"]))));
-          } else if (jsonResponse["message"]["email"] != null) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(AppLocalizations.of(context)!
-                    .translate(jsonResponse["message"]["email"][0]))));
-          } else if (jsonResponse["message"]["password"] != null) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(AppLocalizations.of(context)!
-                    .translate(jsonResponse["message"]["password"][0]))));
+    try {
+      final imagePath = imageChanged
+          ? widget.image
+          : Provider.of<EditProfileProvider>(context, listen: false).path;
+
+      final jsonResponse = await AuthService.updateProfile(
+        id: widget.id,
+        name: name.text,
+        email: email.text,
+        contact: contact.text,
+        password: password.text,
+        imagePath: imagePath,
+      );
+      if (!mounted) return;
+
+      if (jsonResponse["success"] == true ||
+          jsonResponse["status_code"] == 200) {
+        _showSnack(
+          AppLocalizations.of(context)!
+              .translate("Profile Updated Successfully"),
+          isError: false,
+        );
+        await login();
+      } else {
+        final msg = jsonResponse["message"];
+        if (msg is String) {
+          _showSnack(msg);
+        } else if (msg is Map) {
+          if (msg["email"] != null) {
+            _showSnack(msg["email"][0]);
+          } else if (msg["password"] != null) {
+            _showSnack(msg["password"][0]);
           }
         }
       }
     } catch (e) {
-      print(e);
+      _showSnack("Connection error. Please try again.");
     }
+  }
+
+  void _showSnack(String message, {bool isError = true}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isError ? Colors.redAccent : _teal,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline : Icons.check_circle_outline,
+              color: Colors.white,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ─── Build ────────────────────────────────────────────────────────────────────
