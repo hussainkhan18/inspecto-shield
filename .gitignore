@@ -42,3 +42,13 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+# Keystore
+upload-keystore.jks
+android/key.properties
+
+# Firebase
+google-services.json
+android/app/google-services.json
+lib/firebase_options.dart
