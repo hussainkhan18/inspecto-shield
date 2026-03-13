@@ -246,10 +246,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                Text(
-                  "© 2026 Inspecto Shield Platform",
-                  style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                ),
               ],
             ),
           ),

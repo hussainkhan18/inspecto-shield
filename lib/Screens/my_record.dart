@@ -30,7 +30,7 @@ class _MyRecordsState extends State<MyRecords> {
       final records = await RecordService.getRecordList(widget.id);
       if (!mounted) return;
       setState(() {
-        recordList = records;
+        recordList = records.reversed.toList();
         isLoading = false;
       });
     } catch (e) {
@@ -148,7 +148,9 @@ class _MyRecordsState extends State<MyRecords> {
   Widget _buildRecordCard(int index) {
     // ── Parse date ──────────────────────────────────────────
     String datetimeStr = recordList[index][1].toString();
-    DateTime datetime = DateTime.parse(datetimeStr);
+    DateTime datetime = DateTime.parse(
+            datetimeStr.contains('Z') ? datetimeStr : '${datetimeStr}Z')
+        .toLocal();
     String formattedDate = DateFormat('dd MMM yy').format(datetime);
     String formattedTime = DateFormat('hh:mm a').format(datetime);
 

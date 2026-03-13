@@ -19,7 +19,6 @@ class NewInspection extends StatefulWidget {
   final String company;
   final String branch;
   final String email;
-  // String password;
   final String image;
   final String contact;
 
@@ -31,7 +30,6 @@ class NewInspection extends StatefulWidget {
     required this.company,
     required this.branch,
     required this.email,
-    // required this.password,
     required this.image,
     required this.contact,
   });
@@ -59,7 +57,6 @@ class _NewInspectionState extends State<NewInspection> {
       lastDate: DateTime(2050),
     );
     if (pickedDate != null) {
-      // Format the date and show it in the text field
       issueDate.text = DateFormat('yyyy-MM-dd').format(pickedDate);
     }
   }
@@ -72,7 +69,6 @@ class _NewInspectionState extends State<NewInspection> {
       lastDate: DateTime(2050),
     );
     if (pickedDate != null) {
-      // Format the date and show it in the text field
       expiryDate.text = DateFormat('yyyy-MM-dd').format(pickedDate);
     }
   }
@@ -102,7 +98,7 @@ class _NewInspectionState extends State<NewInspection> {
         _certificate = File(pickedFile.path);
         isShow = true;
       });
-      Navigator.of(context).pop(); // Close the current dialog
+      Navigator.of(context).pop();
       _showImageDialog();
     }
   }
@@ -261,7 +257,6 @@ class _NewInspectionState extends State<NewInspection> {
     );
   }
 
-// ── FETCH EQUIPMENT DATA ─────────────────────────────────
   Future<void> postCertificateDataToAPI(String equipmentId,
       File? certificateImg, String issuanceDate, String expiryDate) async {
     if (certificateImg == null) {
@@ -307,14 +302,12 @@ class _NewInspectionState extends State<NewInspection> {
         _equipmentData = data;
         _isLoading = false;
 
-        // Add checklist items to ChecklistProvider here
         if (_equipmentData != null && _equipmentData!['tags'] != null) {
           final checklistData = _equipmentData!['tags'];
           final checklistItems = checklistData is String
               ? checklistData.split(',')
               : List<String>.from(checklistData);
 
-          // Update provider after build
           WidgetsBinding.instance.addPostFrameCallback((_) {
             Provider.of<ChecklistProvider>(context, listen: false)
                 .addItems(checklistItems);
@@ -414,7 +407,6 @@ class _NewInspectionState extends State<NewInspection> {
                   company: widget.company,
                   branch: widget.branch,
                   email: widget.email,
-                  // password: widget.password,
                   image: widget.image,
                   contact: widget.contact,
                 ),
@@ -436,26 +428,7 @@ class _NewInspectionState extends State<NewInspection> {
   void initState() {
     print("QR code id ${widget.data["id"]}");
     print("QR code id ${widget.data}");
-
-    // if (Provider.of<LocaleProvider>(context, listen: false).locale ==
-    //     const Locale('en')) {
-    //   if (widget.data["tags"] != null &&
-    //       (widget.data["tags"] as List).isNotEmpty) {
-    //     items = widget.data["tags"] as List;
-    //   }
-    // } else {
-    //   if (widget.data["arabic_tags"] != null &&
-    //       (widget.data["arabic_tags"] as List).isNotEmpty) {
-    //     items = widget.data["arabic_tags"] as List;
-    //   }
-    // }
-
-    // print(items);
-    // Provider.of<ChecklistProvider>(context, listen: false)
-    //     .addItems(items.cast<String>());
-
     _fetchEquipmentData();
-
     print(widget.data);
     super.initState();
   }
@@ -463,58 +436,88 @@ class _NewInspectionState extends State<NewInspection> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: SafeArea(
-      child: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10.0),
+      backgroundColor: const Color(0xffF5F6FA),
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Image and Add Certificate Button
+                    // ── TOP HEADER CARD ─────────────────────────────
                     Container(
-                      height: MediaQuery.of(context).size.height / 5,
-                      alignment: Alignment.center,
+                      width: double.infinity,
+                      margin: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          Expanded(
+                          // Equipment image
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
                             child: Image.network(
                               _equipmentData?["equipment_img"] ??
                                   "https://hashbaqala.bssstageserverforpanels.xyz/upload/profileImage/user.png",
-                              // scale: 7,
-                              fit: BoxFit
-                                  .contain, // optional: ensures it fits well
-
-                              alignment: Alignment.center,
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 100,
+                                height: 100,
+                                color: const Color(0xffF0F0F0),
+                                child: const Icon(Icons.image_not_supported,
+                                    color: Colors.grey),
+                              ),
                             ),
                           ),
-                          const SizedBox(
-                            width: 10,
-                          ),
-                          Visibility(
-                            visible: _equipmentData != null &&
-                                (_equipmentData!['certificate_permission'] == 'yes' ||
-                                    _equipmentData!['certificate_permission'] ==
-                                        'YES' ||
-                                    _equipmentData!['certificate_permission'] ==
-                                        "" ||
-                                    _equipmentData!['certificate_permission'] ==
-                                        null),
-                            child: Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 20.0),
-                                child: ArgonButton(
-                                  width: 180,
-                                  height: 50,
-                                  borderRadius: 8.0,
-                                  elevation: 10,
+                          const SizedBox(width: 16),
+                          // Certificate button
+                          Expanded(
+                            child: Visibility(
+                              visible: _equipmentData != null &&
+                                  (_equipmentData!['certificate_permission'] ==
+                                          'yes' ||
+                                      _equipmentData![
+                                              'certificate_permission'] ==
+                                          'YES' ||
+                                      _equipmentData![
+                                              'certificate_permission'] ==
+                                          "" ||
+                                      _equipmentData![
+                                              'certificate_permission'] ==
+                                          null),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) => ArgonButton(
+                                  width: constraints.maxWidth,
+                                  height: 46,
+                                  borderRadius: 10.0,
+                                  elevation: 4,
                                   color: const Color(0xff0DC5B9),
-                                  child: Text(
-                                    AppLocalizations.of(context)!
-                                        .translate("Add Certificate"),
-                                    style: const TextStyle(
-                                        color: Colors.white, fontSize: 15),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.add_circle_outline,
+                                          color: Colors.white, size: 18),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        AppLocalizations.of(context)!
+                                            .translate("Add Certificate"),
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
                                   ),
                                   onTap: (startLoading, stopLoading, btnState) {
                                     print("saad qr data: ${widget.data}");
@@ -528,286 +531,379 @@ class _NewInspectionState extends State<NewInspection> {
                       ),
                     ),
 
-                    // Description
-                    _buildDataRow(
-                      context,
-                      label: "EQUIPMENT NAME: ",
-                      value: _equipmentData?["equipment_name"] ?? "No data",
-                    ),
-                    const Divider(),
-                    // Location Description
-                    _buildDataRow(
-                      context,
-                      label: "AREA:",
-                      value: _equipmentData?["area"] ?? "No data",
-                    ),
-                    const Divider(),
-                    // Location Description
-                    _buildDataRow(
-                      context,
-                      label: "LOCATION:",
-                      value: _equipmentData?["location"] ?? "No data",
-                    ),
+                    // ── EQUIPMENT INFO CARD ──────────────────────────
+                    _buildInfoCard(context),
 
-                    const Divider(),
-                    // Equipment Name
-                    _buildDataRow(
-                      context,
-                      label: "DESCRIPTION:",
-                      value: _equipmentData?["description"] ?? "No data",
-                    ),
-                    const Divider(),
-                    // Equipment Type
-                    _buildDataRow(
-                      context,
-                      label: "EQUIPMENT TYPE: ",
-                      value: _equipmentData?["equipment_type"] ?? "No data",
-                    ),
-
-                    const Divider(),
-                    // Equipment Category
-                    _buildDataRow(
-                      context,
-                      label: "EQUIPMENT CATEGORY: ",
-                      value: _equipmentData?["equipment_category"] ?? "No data",
-                    ),
-                    const Divider(),
-                    // Last Inspection Date
-                    _buildDataRow(
-                      context,
-                      label: "LAST INSPECTION DATE: ",
-                      value: _equipmentData?["last_inspection_date"] ??
-                          "No data", // Replace with the correct field if available
-                    ),
-                    const Divider(),
-                    // Checklist Title
-                    Text(
-                      AppLocalizations.of(context)!.translate("Checklist"),
-                      style: const TextStyle(
-                          fontSize: 25, fontWeight: FontWeight.bold),
-                    ),
-                    // Checklist Items
-                    Consumer<ChecklistProvider>(
-                      builder: (context, provider, child) {
-                        final items = provider.items.keys.toList();
-                        return items.isEmpty
-                            ? Container(
-                                alignment: Alignment.center,
-                                height: 170,
-                                child: Text(AppLocalizations.of(context)!
-                                    .translate("No Data")),
-                              )
-                            : ListView.builder(
-                                itemCount: items.length,
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemBuilder: (context, index) {
-                                  return Container(
-                                    height: 85,
-                                    alignment: Alignment.centerLeft,
-                                    padding: const EdgeInsets.only(
-                                        left: 9, right: 20),
-                                    child: _buildRadioButton(items[index]),
-                                  );
-                                },
-                              );
-                      },
-                    ),
-                    // Upload Equipment Image Button
-                    ArgonButton(
-                      width: MediaQuery.of(context).size.width,
-                      height: 50,
-                      borderRadius: 8.0,
-                      elevation: 10,
-                      color: const Color(0xff0DC5B9),
-                      child: Text(
-                        AppLocalizations.of(context)!
-                            .translate("Upload Equipment Image"),
-                        style: const TextStyle(color: Colors.white),
+                    // ── CHECKLIST CARD ───────────────────────────────
+                    Container(
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      onTap: (startLoading, stopLoading, btnState) {
-                        print(_image);
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Checklist header
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 4,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xff0DC5B9),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  AppLocalizations.of(context)!
+                                      .translate("Checklist"),
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xff1A1A2E),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Divider(height: 1, indent: 16, endIndent: 16),
 
-                        showPickerDialog();
-                      },
+                          // Checklist Items
+                          Consumer<ChecklistProvider>(
+                            builder: (context, provider, child) {
+                              final checkItems = provider.items.keys.toList();
+                              return checkItems.isEmpty
+                                  ? Container(
+                                      alignment: Alignment.center,
+                                      padding: const EdgeInsets.all(32),
+                                      child: Text(
+                                        AppLocalizations.of(context)!
+                                            .translate("No Data"),
+                                        style: const TextStyle(
+                                            color: Colors.grey, fontSize: 15),
+                                      ),
+                                    )
+                                  : ListView.separated(
+                                      itemCount: checkItems.length,
+                                      shrinkWrap: true,
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      separatorBuilder: (_, __) =>
+                                          const Divider(
+                                              height: 1,
+                                              indent: 16,
+                                              endIndent: 16),
+                                      itemBuilder: (context, index) {
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 16, vertical: 12),
+                                          child: _buildChecklistItem(
+                                              checkItems[index]),
+                                        );
+                                      },
+                                    );
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
                     ),
-                    // Display selected image
+
+                    // ── UPLOAD IMAGE SECTION ─────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                      child: ArgonButton(
+                        width: MediaQuery.of(context).size.width - 32,
+                        height: 52,
+                        borderRadius: 12.0,
+                        elevation: 4,
+                        color: const Color(0xff0DC5B9),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.camera_alt_outlined,
+                                color: Colors.white, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              AppLocalizations.of(context)!
+                                  .translate("Upload Equipment Image"),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                        onTap: (startLoading, stopLoading, btnState) {
+                          print(_image);
+                          pickImage(ImageSource.camera);
+                        },
+                      ),
+                    ),
+
+                    // Uploaded image preview
                     Visibility(
                       visible: isVisible,
-                      child: SizedBox(
+                      child: Container(
+                        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                         height: MediaQuery.of(context).size.height / 5,
-                        child: _image != null
-                            ? Image.file(_image!)
-                            : Text(AppLocalizations.of(context)!
-                                .translate('No image selected.')),
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 5,
-                    ),
-                    // Save Button
-                    ArgonButton(
-                      width: MediaQuery.of(context).size.width,
-                      height: 50,
-                      borderRadius: 8.0,
-                      elevation: 10,
-                      color: Colors.black,
-                      loader: Container(
-                        padding: const EdgeInsets.all(10),
-                        child: const CircularProgressIndicator(
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: const Color(0xff0DC5B9), width: 2),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: _image != null
+                              ? Image.file(_image!, fit: BoxFit.cover)
+                              : Center(
+                                  child: Text(
+                                    AppLocalizations.of(context)!
+                                        .translate('No image selected.'),
+                                  ),
+                                ),
                         ),
                       ),
-                      onTap: (startLoading, stopLoading, btnState) async {
-                        startLoading();
-                        try {
-                          await saveCheckList();
-                        } finally {
-                          stopLoading();
-                        }
-                      },
-                      child: Text(
-                        AppLocalizations.of(context)!.translate("SAVE"),
-                        style: const TextStyle(color: Colors.white),
-                      ),
                     ),
-                    const SizedBox(
-                      height: 10,
+
+                    // ── SAVE BUTTON ──────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                      child: ArgonButton(
+                        width: MediaQuery.of(context).size.width - 32,
+                        height: 52,
+                        borderRadius: 12.0,
+                        elevation: 4,
+                        color: const Color(0xff1A1A2E),
+                        loader: Container(
+                          padding: const EdgeInsets.all(10),
+                          child: const CircularProgressIndicator(
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                        onTap: (startLoading, stopLoading, btnState) async {
+                          startLoading();
+                          try {
+                            await saveCheckList();
+                          } finally {
+                            stopLoading();
+                          }
+                        },
+                        child: Text(
+                          AppLocalizations.of(context)!.translate("SAVE"),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
-    ));
+      ),
+    );
+  }
+
+  // ── EQUIPMENT INFO CARD ────────────────────────────────────────────────────
+  Widget _buildInfoCard(BuildContext context) {
+    final fields = [
+      {"label": "EQUIPMENT NAME: ", "value": _equipmentData?["equipment_name"]},
+      {"label": "AREA:", "value": _equipmentData?["area"]},
+      {"label": "LOCATION:", "value": _equipmentData?["location"]},
+      {"label": "DESCRIPTION:", "value": _equipmentData?["description"]},
+      {"label": "EQUIPMENT TYPE: ", "value": _equipmentData?["equipment_type"]},
+      {
+        "label": "EQUIPMENT CATEGORY: ",
+        "value": _equipmentData?["equipment_category"]
+      },
+      {
+        "label": "LAST INSPECTION DATE: ",
+        "value": _equipmentData?["last_inspection_date"]
+      },
+    ];
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: List.generate(fields.length, (i) {
+          final isLast = i == fields.length - 1;
+          return Column(
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.38,
+                      child: Text(
+                        AppLocalizations.of(context)!
+                            .translate(fields[i]["label"] ?? ""),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xff555555),
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        fields[i]["value"] ?? "No data",
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xff1A1A2E),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!isLast) const Divider(height: 1, indent: 16, endIndent: 16),
+            ],
+          );
+        }),
+      ),
+    );
   }
 }
 
-// Helper method to build a row with a label and value
-Widget _buildDataRow(BuildContext context,
-    {required String label, required String value}) {
-  return Row(
-    children: [
-      Expanded(
-        child: SizedBox(
-          width: MediaQuery.of(context).size.width / 2,
-          child: Text(
-            AppLocalizations.of(context)!.translate(label),
+// ── CHECKLIST ITEM with styled chips ────────────────────────────────────────
+Widget _buildChecklistItem(String title) {
+  final options = [
+    {"label": "Good", "value": "Good", "color": const Color(0xff22C55E)},
+    {"label": "Bad", "value": "Bad", "color": const Color(0xffEF4444)},
+    {"label": "N/A", "value": "N/A", "color": const Color(0xff94A3B8)},
+  ];
+
+  return Consumer<ChecklistProvider>(
+    builder: (context, provider, child) {
+      final selectedVal = provider.items[title];
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
             style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xff1A1A2E),
             ),
           ),
-        ),
-      ),
-      Expanded(
-        child: Container(
-          padding: const EdgeInsets.only(left: 20),
-          width: MediaQuery.of(context).size.width / 2,
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 15,
-            ),
+          const SizedBox(height: 8),
+          Row(
+            children: options.map((opt) {
+              final isSelected = selectedVal == opt["value"];
+              final color = opt["color"] as Color;
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () =>
+                      provider.changeValue(title, opt["value"] as String),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? color.withOpacity(0.12)
+                          : const Color(0xffF5F6FA),
+                      border: Border.all(
+                        color: isSelected ? color : const Color(0xffDDE1E7),
+                        width: isSelected ? 1.8 : 1.2,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isSelected
+                              ? Icons.check_circle_rounded
+                              : Icons.radio_button_unchecked,
+                          color: isSelected ? color : const Color(0xffBDBDBD),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          AppLocalizations.of(context)!
+                              .translate(opt["label"] as String),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isSelected ? color : const Color(0xff777777),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
           ),
-        ),
-      ),
-    ],
+        ],
+      );
+    },
   );
 }
 
-Widget _buildRadioButton(String title) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        title,
-        style: const TextStyle(fontSize: 17),
-      ),
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Consumer<ChecklistProvider>(
-            builder: (context, ChecklistProvider, child) {
-              return GestureDetector(
-                onTap: () {
-                  ChecklistProvider.changeValue(
-                      title, AppLocalizations.of(context)!.translate("Good"));
-                },
-                child: Row(
-                  children: [
-                    Radio(
-                      fillColor: WidgetStateProperty.all(Colors.green),
-                      activeColor: Colors.green,
-                      value: "Good",
-                      groupValue: ChecklistProvider.items[title],
-                      onChanged: (value) {
-                        ChecklistProvider.changeValue(title, "Good");
-                      },
-                    ),
-                    Text(
-                      AppLocalizations.of(context)!.translate('Good'),
-                      style: const TextStyle(fontSize: 17),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          Consumer<ChecklistProvider>(
-            builder: (context, ChecklistProvider, child) {
-              return GestureDetector(
-                onTap: () {
-                  ChecklistProvider.changeValue(title, "Bad");
-                },
-                child: Row(
-                  children: [
-                    Radio(
-                      fillColor: WidgetStateProperty.all(Colors.red),
-                      activeColor: Colors.red,
-                      value: "Bad",
-                      groupValue: ChecklistProvider.items[title],
-                      onChanged: (value) {
-                        ChecklistProvider.changeValue(title, "Bad");
-                      },
-                    ),
-                    Text(
-                      AppLocalizations.of(context)!.translate('Bad'),
-                      style: const TextStyle(fontSize: 17),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          Consumer<ChecklistProvider>(
-            builder: (context, ChecklistProvider, child) {
-              return GestureDetector(
-                onTap: () {
-                  ChecklistProvider.changeValue(title, "N/A");
-                },
-                child: Row(
-                  children: [
-                    Radio(
-                      fillColor: WidgetStateProperty.all(Colors.grey[800]),
-                      activeColor: Colors.grey[800],
-                      value: "N/A",
-                      groupValue: ChecklistProvider.items[title],
-                      onChanged: (value) {
-                        ChecklistProvider.changeValue(title, "N/A");
-                      },
-                    ),
-                    Text(
-                      AppLocalizations.of(context)!.translate('N/A'),
-                      style: const TextStyle(fontSize: 17),
-                    ),
-                  ],
-                ),
-              );
-            },
-          )
-        ],
-      ),
-    ],
-  );
-}
+// ── DATA ROW helper (kept for any external usage) ────────────────────────────
+// Widget _buildDataRow(BuildContext context,
+//     {required String label, required String value}) {
+//   return Row(
+//     children: [
+//       Expanded(
+//         child: SizedBox(
+//           width: MediaQuery.of(context).size.width / 2,
+//           child: Text(
+//             AppLocalizations.of(context)!.translate(label),
+//             style: const TextStyle(
+//               fontSize: 15,
+//               fontWeight: FontWeight.bold,
+//             ),
+//           ),
+//         ),
+//       ),
+//       Expanded(
+//         child: Container(
+//           padding: const EdgeInsets.only(left: 20),
+//           width: MediaQuery.of(context).size.width / 2,
+//           child: Text(
+//             value,
+//             style: const TextStyle(
+//               fontSize: 15,
+//             ),
+//           ),
+//         ),
+//       ),
+//     ],
+//   );
+// }
