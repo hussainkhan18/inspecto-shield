@@ -14,6 +14,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   // Global key for form validation state
   final _formKey = GlobalKey<FormState>();
+  bool isGuestLoading = false;
 
   // Controllers to manage text input and retrieval
   final TextEditingController email = TextEditingController();
@@ -65,6 +66,49 @@ class _LoginScreenState extends State<LoginScreen> {
       // General exception handler for network issues or timeouts
       _showSnack("No internet connection. Please try again.");
     }
+  }
+
+  // login as a guest
+  Future<void> loginAsGuest() async {
+    setState(() {
+      isGuestLoading = true;
+    });
+
+    try {
+      final jsonResponse = await AuthService.login(
+        'arham@gmail.com',
+        '123456',
+      );
+
+      if (jsonResponse["success"] == true) {
+        await AuthService.saveSession(jsonResponse);
+
+        if (!mounted) return;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomeScreen(
+              id: jsonResponse["user"]["id"],
+              name: jsonResponse["user"]["fullname"],
+              company: jsonResponse["user"]["company_name"],
+              branch: jsonResponse["user"]["branch_name"],
+              email: jsonResponse["user"]["email"],
+              image: jsonResponse["user"]["profile_img"],
+              contact: jsonResponse["user"]["contact_number"],
+            ),
+          ),
+        );
+      } else {
+        _showSnack("Guest login failed. Please try again.");
+      }
+    } catch (e) {
+      _showSnack("No internet connection.");
+    }
+
+    setState(() {
+      isGuestLoading = false;
+    });
   }
 
   /// Parses error messages from the API response
@@ -245,6 +289,26 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 20),
+
+                // Guest Login Button
+                isGuestLoading
+                    ? const CircularProgressIndicator(color: Color(0xff0DC5B9))
+                    : GestureDetector(
+                        onTap: () async {
+                          await loginAsGuest();
+                        },
+                        child: Text(
+                          AppLocalizations.of(context)!
+                              .translate('Continue as Guest'),
+                          style: const TextStyle(
+                            color: Color(0xff0DC5B9),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
                 const SizedBox(height: 20),
               ],
             ),
