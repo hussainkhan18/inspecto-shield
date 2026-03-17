@@ -36,9 +36,6 @@
     "DESCRIPTION:": "DESCRIPTION:",
     "LOCATION DESCRIPTION: ": "LOCATION DESCRIPTION: ",
     "EQUIPMENT: ": "EQUIPMENT: ",
-    "EQUIPMENT TYPE: ": "EQUIPMENT TYPE: ",
-    "EQUIPMENT FAMILY: ": "EQUIPMENT FAMILY: ",
-    "LAST INSPECTION DATE: ": "LAST INSPECTION DATE: ",
     "Checklist": "Checklist",
     "ATTACH IMAGE": "ATTACH IMAGE",
     "Good": "Good",
@@ -72,5 +69,8 @@
     "LOCATION:": "LOCATION:",
     "UPCOMING INSPECTION": "UPCOMING INSPECTION",
     "Continue as Guest": "Continue as Guest",
-    "COMPLAINTS": "COMPLAINTS"   
+    "COMPLAINTS": "COMPLAINTS"  , 
+    "Notes": "Notes",
+    "Optional": "Optional",
+    "Add any observations or remarks...": "Add any observations or remarks..."
 }

@@ -48,6 +48,16 @@ class _NewInspectionState extends State<NewInspection> {
   bool _isLoading = true;
   TextEditingController issueDate = TextEditingController();
   TextEditingController expiryDate = TextEditingController();
+  // ── Notes controller ──────────────────────────────────────
+  final TextEditingController _notesController = TextEditingController();
+
+  @override
+  void dispose() {
+    issueDate.dispose();
+    expiryDate.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
 
   Future<void> _selectIssueDate(BuildContext context) async {
     final DateTime? pickedDate = await showDatePicker(
@@ -357,6 +367,7 @@ class _NewInspectionState extends State<NewInspection> {
         issuanceDate: issueDate.text,
         expiryDate: expiryDate.text,
         checklistItems: Map<String, String>.from(checklistProvider.items),
+        notes: _notesController.text, // ── notes pass kar diya ──
       );
 
       if (!mounted) return;
@@ -437,6 +448,23 @@ class _NewInspectionState extends State<NewInspection> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xffF5F6FA),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          AppLocalizations.of(context)!.translate("NEW INSPECTION"),
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -448,7 +476,6 @@ class _NewInspectionState extends State<NewInspection> {
                     Container(
                       width: double.infinity,
                       margin: const EdgeInsets.all(16),
-                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -460,42 +487,40 @@ class _NewInspectionState extends State<NewInspection> {
                           ),
                         ],
                       ),
-                      child: Row(
+                      child: Column(
                         children: [
-                          // Equipment image
+                          // Equipment image — full width, rounded top corners
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(16)),
                             child: Image.network(
                               _equipmentData?["equipment_img"] ??
                                   "https://hashbaqala.bssstageserverforpanels.xyz/upload/profileImage/user.png",
-                              width: 100,
-                              height: 100,
+                              width: double.infinity,
+                              height: MediaQuery.of(context).size.height * 0.25,
                               fit: BoxFit.contain,
                               errorBuilder: (_, __, ___) => Container(
-                                width: 100,
-                                height: 100,
+                                width: double.infinity,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.25,
                                 color: const Color(0xffF0F0F0),
                                 child: const Icon(Icons.image_not_supported,
-                                    color: Colors.grey),
+                                    color: Colors.grey, size: 48),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 16),
-                          // Certificate button
-                          Expanded(
-                            child: Visibility(
-                              visible: _equipmentData != null &&
-                                  (_equipmentData!['certificate_permission'] ==
-                                          'yes' ||
-                                      _equipmentData![
-                                              'certificate_permission'] ==
-                                          'YES' ||
-                                      _equipmentData![
-                                              'certificate_permission'] ==
-                                          "" ||
-                                      _equipmentData![
-                                              'certificate_permission'] ==
-                                          null),
+                          // Certificate button — below image
+                          Visibility(
+                            visible: _equipmentData != null &&
+                                (_equipmentData!['certificate_permission'] == 'yes' ||
+                                    _equipmentData!['certificate_permission'] ==
+                                        'YES' ||
+                                    _equipmentData!['certificate_permission'] ==
+                                        "" ||
+                                    _equipmentData!['certificate_permission'] ==
+                                        null),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
                               child: LayoutBuilder(
                                 builder: (context, constraints) => ArgonButton(
                                   width: constraints.maxWidth,
@@ -533,6 +558,111 @@ class _NewInspectionState extends State<NewInspection> {
 
                     // ── EQUIPMENT INFO CARD ──────────────────────────
                     _buildInfoCard(context),
+
+                    // ── NOTES CARD ───────────────────────────────────
+                    Container(
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 4,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xff0DC5B9),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  AppLocalizations.of(context)!
+                                      .translate("Notes"),
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xff1A1A2E),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // Optional badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xffF0F0F0),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    AppLocalizations.of(context)!
+                                        .translate("Optional"),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xff888888),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Divider(height: 1, indent: 16, endIndent: 16),
+                          // Text field
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                            child: TextField(
+                              controller: _notesController,
+                              maxLines: 3,
+                              minLines: 2,
+                              textInputAction: TextInputAction.newline,
+                              decoration: InputDecoration(
+                                hintText: AppLocalizations.of(context)!
+                                    .translate(
+                                        "Add any observations or remarks..."),
+                                hintStyle: const TextStyle(
+                                  color: Color(0xffAAAAAA),
+                                  fontSize: 13,
+                                ),
+                                filled: true,
+                                fillColor: const Color(0xffF5F6FA),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 12),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                      color: Color(0xffDDE1E7)),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                      color: Color(0xffDDE1E7)),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                      color: Color(0xff0DC5B9), width: 1.5),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
                     // ── CHECKLIST CARD ───────────────────────────────
                     Container(
@@ -874,36 +1004,3 @@ Widget _buildChecklistItem(String title) {
     },
   );
 }
-
-// ── DATA ROW helper (kept for any external usage) ────────────────────────────
-// Widget _buildDataRow(BuildContext context,
-//     {required String label, required String value}) {
-//   return Row(
-//     children: [
-//       Expanded(
-//         child: SizedBox(
-//           width: MediaQuery.of(context).size.width / 2,
-//           child: Text(
-//             AppLocalizations.of(context)!.translate(label),
-//             style: const TextStyle(
-//               fontSize: 15,
-//               fontWeight: FontWeight.bold,
-//             ),
-//           ),
-//         ),
-//       ),
-//       Expanded(
-//         child: Container(
-//           padding: const EdgeInsets.only(left: 20),
-//           width: MediaQuery.of(context).size.width / 2,
-//           child: Text(
-//             value,
-//             style: const TextStyle(
-//               fontSize: 15,
-//             ),
-//           ),
-//         ),
-//       ),
-//     ],
-//   );
-// }

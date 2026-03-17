@@ -71,6 +71,7 @@ class EquipmentService {
     required String issuanceDate,
     required String expiryDate,
     required Map<String, String> checklistItems,
+    String? notes,
   }) async {
     var request = http.MultipartRequest(
       'POST',
@@ -103,6 +104,10 @@ class EquipmentService {
     request.fields['location_name'] = equipmentData["location"] ?? '';
     request.fields['created_by'] = inspectorId.toString();
     request.fields['equipment_name'] = equipmentData["equipment_name"] ?? '';
+
+    if (notes != null && notes.trim().isNotEmpty) {
+      request.fields['notes'] = notes.trim();
+    }
 
     // Checklist tags
     int index = 1;
