@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:hash_mufattish/LanguageTranslate/app_localizations.dart';
 import 'package:hash_mufattish/Providers/upcoming_inspection_provider.dart';
 import 'package:hash_mufattish/Screens/Profile.dart';
+import 'package:hash_mufattish/Screens/complaints_screen.dart';
 import 'package:hash_mufattish/Screens/equipment_info.dart';
 import 'package:hash_mufattish/Screens/internet_error_popup.dart';
 import 'package:hash_mufattish/Screens/login.dart';
@@ -379,7 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.only(top: 40, bottom: 30),
-                child: Image.asset("assets/HASH MUFATTISH.png", scale: 4),
+                child: Image.asset("assets/HASH MUFATTISH.png", scale: 5),
               ),
 
               // ─── NEW INSPECTION ───────────────────────────────────
@@ -392,9 +393,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   elevation: 10,
                   color: Colors.black,
                   borderSide: const BorderSide(color: Colors.teal),
-                  child: const Text(
-                    'NEW INSPECTION',
-                    style: TextStyle(
+                  child: Text(
+                    AppLocalizations.of(context)!.translate('NEW INSPECTION'),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
@@ -550,6 +551,104 @@ class _HomeScreenState extends State<HomeScreen> {
                               }
                             } else {
                               _showError(context, 'Invalid QR code format.');
+                            }
+                          },
+                        ),
+                      ),
+                      buttons: [
+                        DialogButton(
+                          onPressed: () => Navigator.pop(context),
+                          color: Colors.red,
+                          child: const Text(
+                            "Cancel",
+                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          ),
+                        ),
+                      ],
+                    ).show();
+                  },
+                ),
+              ),
+
+              // ─── COMPLAINTS ───────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: ArgonButton(
+                  width: MediaQuery.of(context).size.width,
+                  height: 50,
+                  borderRadius: 8.0,
+                  elevation: 10,
+                  color: Colors.black,
+                  borderSide: const BorderSide(color: Colors.teal),
+                  child: Text(
+                    AppLocalizations.of(context)!.translate('COMPLAINTS'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: (startLoading, stopLoading, btnState) async {
+                    bool isNavigated = false;
+
+                    Alert(
+                      context: context,
+                      title: "Scan QR Code",
+                      content: SizedBox(
+                        height: 400,
+                        width: 300,
+                        child: MobileScanner(
+                          controller: controller,
+                          onDetect: (BarcodeCapture barcodeCapture) {
+                            if (isNavigated) return;
+                            isNavigated = true;
+
+                            final String? code =
+                                barcodeCapture.barcodes.first.rawValue;
+
+                            if (code != null && code.trim().startsWith('{')) {
+                              try {
+                                final decodedData = json.decode(code);
+
+                                if (decodedData is Map) {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => NetworkWrapper(
+                                        child: ComplaintsScreen(
+                                          data: decodedData,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content:
+                                          Text('Unexpected QR code format.'),
+                                      duration: Duration(seconds: 3),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content:
+                                        Text('Failed to decode QR code data.'),
+                                    duration: Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Ensure QR code is scanned under optimal conditions.',
+                                  ),
+                                  duration: Duration(seconds: 5),
+                                ),
+                              );
                             }
                           },
                         ),
