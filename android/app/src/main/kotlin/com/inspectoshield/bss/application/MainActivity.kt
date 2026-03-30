@@ -1,4 +1,4 @@
-package com.inspecto.shield.hashpixels
+package com.inspectoshield.bss.application
 
 import io.flutter.embedding.android.FlutterActivity
 

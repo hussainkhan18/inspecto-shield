@@ -19,6 +19,8 @@ class ApiConstants {
   static const String getCertificate = '$baseUrl/certificate';
   //upcoming inspection
   static const String upcomingInspection = '$baseUrl/inspector/weekly-pending';
-  // Complaints
+  // post Complaints
   static const String complaints = '$baseUrl/complaints';
+  // Get Complaints
+  static const String getComplaints = '$baseUrl/get_complaints';
 }

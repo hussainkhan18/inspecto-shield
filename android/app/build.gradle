@@ -32,7 +32,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace "com.inspecto.shield.hashpixels"
+    namespace "com.inspectoshield.bss.application"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion   // removed duplicate manual line
 
@@ -51,7 +51,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.inspecto.shield.hashpixels"
+        applicationId "com.inspectoshield.bss.application"
         minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
